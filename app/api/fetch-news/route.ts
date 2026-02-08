@@ -5,7 +5,7 @@ import { filterArticles, RawArticle } from "@/lib/filter";
 export async function POST() {
   try {
     const response = await fetch(
-      `https://newsapi.org/v2/everything?q=Supreme Court OR High Court OR Constitution OR EWS&language=en&sortBy=publishedAt&apiKey=${process.env.NEWS_API_KEY}`
+      `https://newsapi.org/v2/top-headlines?country=in&language=en&apiKey=${process.env.NEWS_API_KEY}`
     );
 
     if (!response.ok) {
@@ -19,22 +19,9 @@ export async function POST() {
     let insertedCount = 0;
 
     for (const article of processed) {
-      const articleData = {
-        title: article.title,
-        summary: article.summary,
-        content: article.content,
-        source: article.source,
-        url: article.url,
-        image_url: article.image_url,
-        legal_category: article.category,
-        region: article.region,
-        score: article.score,
-        published_at: article.published_at,
-      };
-
       const { error } = await supabase
-        .from("legal_news")
-        .upsert(articleData, { onConflict: "url" });
+        .from("legal_news") // table name same rakho
+        .upsert(article, { onConflict: "url" });
 
       if (!error) insertedCount++;
     }
@@ -43,7 +30,6 @@ export async function POST() {
       success: true,
       inserted: insertedCount,
     });
-
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message },
@@ -53,5 +39,12 @@ export async function POST() {
 }
 
 export async function GET() {
-  return POST();
+  const { data } = await supabase
+    .from("news")
+    .select("*")
+    .order("score", { ascending: false })
+    .order("published_at", { ascending: false })
+    .limit(30);
+
+  return NextResponse.json({ success: true, data });
 }

@@ -4,26 +4,23 @@ import { supabase } from "@/lib/supabse";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const filter = searchParams.get("category");
+    const category = searchParams.get("category");
+    const region = searchParams.get("region");
 
     let query = supabase.from("legal_news").select("*");
 
-    if (filter && filter !== "All") {
-
-      // 🌍 GLOBAL
-      if (filter === "Global") {
-        query = query.eq("region", "global");
-      }
-
-      // 🟢 ALL OTHER CATEGORIES
-      else {
-        query = query.eq("legal_category", filter);
-      }
+    // Category filter
+    if (category && category !== "All") {
+      query = query.eq("category", category);
     }
 
-    query = query
-      .order("score", { ascending: false })
-      .order("published_at", { ascending: false });
+    // Region filter
+    if (region) {
+      query = query.eq("region", region);
+    }
+
+    // Latest first
+    query = query.order("published_at", { ascending: false });
 
     const { data, error } = await query;
 
@@ -31,8 +28,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      filter: filter || "All",
-      count: data?.length || 0,
       articles: data,
     });
 

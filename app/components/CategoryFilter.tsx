@@ -3,7 +3,7 @@ interface Props {
   setSelected: (value: string) => void;
 }
 
-const categories = ["All", "Legal", "Global", "Political", "Sports"];
+const categories = ["All", "Legal", "Global", "Political", "Sports", "Finance"];
 
 export default function CategoryFilter({
   selected,
