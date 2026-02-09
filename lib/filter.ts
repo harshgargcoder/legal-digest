@@ -1,7 +1,3 @@
-// ===============================
-// Types
-// ===============================
-
 export interface RawArticle {
   title: string;
   description?: string;
@@ -54,10 +50,15 @@ export function detectCategory(text: string): string {
   // 1️⃣ Sports
   if (
   lower.includes("cricket") ||
+  lower.includes("tennis") ||
+  lower.includes("basketball") ||
+  lower.includes("soccer") ||
+  lower.includes("olympic") ||
+  lower.includes("world cup") ||
+  lower.includes("chess") ||
   lower.includes("football") ||
   lower.includes("match") ||
   lower.includes("ipl") ||
-  lower.includes("olympics") ||
   lower.includes("tournament") ||
   lower.includes("league") ||
   lower.includes("final") ||
@@ -71,29 +72,31 @@ export function detectCategory(text: string): string {
 
   // 2️⃣ Finance
   if (
-    lower.includes("stock") ||
+    lower.includes("stock market") ||
+    lower.includes("future option") ||
+    lower.includes("trading") ||
+    lower.includes("ipo") ||
     lower.includes("market") ||
+    lower.includes("share") ||
+    lower.includes("stocks") ||
+    lower.includes("share market") ||
     lower.includes("share price") ||
+    lower.includes("investment") ||
+    lower.includes("interest rates") ||
+    lower.includes("bond") ||
+    lower.includes("bond yield") ||
+    lower.includes("bond rate") ||
+    lower.includes("bond price") ||
+    lower.includes("bond maturity") ||
+    lower.includes("bond duration") ||
     lower.includes("economy") ||
+    lower.includes("currency") ||
     lower.includes("sensex") ||
     lower.includes("nifty") ||
     lower.includes("inflation") ||
     lower.includes("gdp")
   ) {
     return "Finance";
-  }
-
-  // 3️⃣ Political
-  if (
-    lower.includes("parliament") ||
-    lower.includes("election") ||
-    lower.includes("minister") ||
-    lower.includes("government") ||
-    lower.includes("bill") ||
-    lower.includes("policy") ||
-    lower.includes("cabinet")
-  ) {
-    return "Political";
   }
 
   // 4️⃣ Global
@@ -104,7 +107,32 @@ export function detectCategory(text: string): string {
     lower.includes("ukraine") ||
     lower.includes("europe") ||
     lower.includes("israel") ||
-    lower.includes("gaza")
+    lower.includes("gaza") ||
+    lower.includes("afghanistan") ||
+    lower.includes("syria") ||
+    lower.includes("iran") ||
+    lower.includes("north korea") ||
+    lower.includes("south korea") ||
+    lower.includes("global") ||
+    lower.includes("world") ||
+    lower.includes("asia") ||
+    lower.includes("international") ||
+    lower.includes("diplomacy") ||
+    lower.includes("terrorism") ||
+    lower.includes("conflict") ||
+    lower.includes("war") ||
+    lower.includes("peace") ||
+    lower.includes("sanction") ||
+    lower.includes("refugee") ||
+    lower.includes("nuclear") ||
+    lower.includes("climate change") ||
+    lower.includes("environment") ||
+    lower.includes("pandemic") ||
+    lower.includes("health") ||
+    lower.includes("covid") ||
+    lower.includes("vaccine") ||
+    lower.includes("economy") ||
+    lower.includes("trade")
   ) {
     return "Global";
   }
@@ -114,14 +142,32 @@ export function detectCategory(text: string): string {
     lower.includes("supreme court") ||
     lower.includes("high court") ||
     lower.includes("judgment") ||
-    lower.includes("judgement") ||
+    lower.includes("judicial") ||
     lower.includes("constitutional") ||
+    lower.includes("criminal") ||
+    lower.includes("case") ||
+    lower.includes("ammendment") ||
     lower.includes("tribunal") ||
     lower.includes("petition") ||
     lower.includes("verdict") ||
     lower.includes("bail plea") ||
     lower.includes("bench") ||
-    lower.includes("justice ")
+    lower.includes("justice ") ||
+    lower.includes("parliament") ||
+    lower.includes("election") ||
+    lower.includes("minister") ||
+    lower.includes("government") ||
+    lower.includes("bill") ||
+    lower.includes("policy") ||
+    lower.includes("cabinet") ||
+    lower.includes("legislation") ||
+    lower.includes("assembly") ||
+    lower.includes("senate") ||
+    lower.includes("congress") ||
+    lower.includes("diplomacy") ||
+    lower.includes("cabinet") ||
+    lower.includes("reform") ||
+    lower.includes("assembly")
   ) {
     return "Legal";
   }

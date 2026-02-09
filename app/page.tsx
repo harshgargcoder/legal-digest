@@ -1,62 +1,112 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import NewsCard from "./components/news/NewsCard";
+import CategoryFilter from "./components/categories/CategoryFilter";
+import NewsFeed from "./components/news/NewsFeed";
+import HeroSection from "./components/HeroSection";
+import NewsletterCTA from "./components/NewsLetterCTA";
+import TrendingSidebar from "./components/TrendingSidebar";
 
-const categories = ["All", "Legal", "Political", "Finance", "Sports", "Global"];
-  
 export default function Home() {
   const [category, setCategory] = useState("All");
-  const [articles, setArticles] = useState([]);
+  const [search, setSearch] = useState("");
+  const [news, setNews] = useState<any[]>([]);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchNews();
-  }, [category]);
+    const fetchStats = async () => {
+      try {
+        const res = await fetch("/api/get-news?stats=true");
+        const data = await res.json();
 
-  async function fetchNews() {
-    const res =
-      category === "All"
-        ? await fetch("/api/get-news")
-        : await fetch(`/api/get-news?category=${category}`);
+        if (data.success) {
+          setNews(data.articles || []);
+          setLastUpdated(data.lastUpdated || null);
+        }
+      } catch (err) {
+        console.error("Failed to fetch stats");
+      }
+    };
 
-    const data = await res.json();
-    setArticles(data.articles || []);
-  }
+    fetchStats();
+  }, []);
+
+  // Stats Logic
+  const totalArticles = news.length;
+  const uniqueSources = [
+    ...new Set(news.map((item) => item.source).filter(Boolean)),
+  ].length;
+
+  const lastUpdateText = lastUpdated
+    ? new Date(lastUpdated).toLocaleString()
+    : "—";
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
-      <h1 className="text-4xl font-bold text-white mb-8">
-        Legal Intelligence Feed
-      </h1>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
 
-      {/* Tabs */}
-      <div className="flex gap-4 mb-10">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            onClick={() => setCategory(cat)}
-            className={`px-4 py-2 rounded-full text-sm font-medium ${
-              category === cat
-                ? "bg-indigo-600 text-white"
-                : "bg-white/10 text-gray-300"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
+      <HeroSection search={search} setSearch={setSearch} />
+
+      {/* STATUS STRIP */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-14">
+
+        <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition">
+          <p className="text-2xl font-semibold text-[#2f4a63]">
+            {totalArticles}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Articles Indexed
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition">
+          <p className="text-2xl font-semibold text-[#2f4a63]">
+            {uniqueSources}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Global Sources
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition">
+          <p className="text-2xl font-semibold text-[#2f4a63]">
+            {lastUpdateText}
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Last Updated
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition">
+          <p className="text-2xl font-semibold text-[#2f4a63]">
+            3h
+          </p>
+          <p className="text-sm text-gray-500 mt-1">
+            Auto Refresh Cycle
+          </p>
+        </div>
+
       </div>
 
-      {/* News Grid */}
-      <div className="grid gap-8">
-        {articles.map((item: any, index: number) => (
-          <NewsCard
-            key={item.id}
-            item={item}
-            index={index}
-            activeCategory={category}
-          />
-        ))}
+      <CategoryFilter
+        category={category}
+        setCategory={setCategory}
+      />
+
+      {/* NEWS + SIDEBAR */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mt-10">
+
+        <div className="lg:col-span-2">
+          <NewsFeed category={category} search={search} />
+        </div>
+
+        <aside className="hidden lg:block">
+          <TrendingSidebar setSearch={setSearch} />
+        </aside>
+
       </div>
+
+      <NewsletterCTA />
+
     </div>
   );
 }

@@ -1,0 +1,31 @@
+"use client";
+
+interface Props {
+  category: string;
+  setCategory: React.Dispatch<React.SetStateAction<string>>;
+}
+
+const categories = ["All", "Legal", "Finance", "Sports", "Global"];
+
+export default function CategoryFilter({
+  category,
+  setCategory,
+}: Props) {
+  return (
+    <div className="flex gap-3 mb-8 overflow-x-auto no-scrollbar">
+      {categories.map((cat) => (
+        <button
+          key={cat}
+          onClick={() => setCategory(cat)}
+          className={`px-4 py-2 rounded-full text-sm whitespace-nowrap font-medium transition ${
+            category === cat
+              ? "bg-indigo-600 text-white"
+              : "bg-white/10 text-gray-300 hover:bg-white/20"
+          }`}
+        >
+          {cat}
+        </button>
+      ))}
+    </div>
+  );
+}

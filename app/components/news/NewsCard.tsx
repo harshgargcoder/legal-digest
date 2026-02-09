@@ -15,7 +15,7 @@ export default function NewsCard({ item, index }: Props) {
   return (
     <div
       className={`
-        relative overflow-hidden rounded-2xl p-6 transition-all duration-500
+        relative overflow-hidden rounded-2xl p-4 sm:p-6 transition-all duration-500
         ${isTopThree
           ? "bg-gradient-to-br from-indigo-600/20 to-purple-600/20 backdrop-blur-xl border border-indigo-400/30 shadow-xl scale-[1.02]"
           : "bg-white/5 backdrop-blur-lg border border-white/10"
@@ -31,12 +31,12 @@ export default function NewsCard({ item, index }: Props) {
       )}
 
       {/* Title */}
-      <h2 className="text-xl font-semibold text-white leading-snug">
+      <h2 className="text-lg sm:text-xl font-semibold text-white leading-snug">
         {item.title}
       </h2>
 
       {/* Summary */}
-      <p className="text-gray-300 mt-3 leading-relaxed text-sm">
+      <p className="text-gray-300 mt-3 leading-relaxed text-sm sm:text-base">
         {item.summary}
       </p>
 
@@ -45,7 +45,7 @@ export default function NewsCard({ item, index }: Props) {
 
         <div className="flex items-center gap-3 text-xs text-gray-300">
           <span className="bg-white/10 px-3 py-1 rounded-full">
-            {item.legal_category}
+            {item.category}
           </span>
 
           <span>

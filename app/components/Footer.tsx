@@ -1,31 +1,84 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="mt-16 border-t border-gray-200 bg-white">
-      <div className="max-w-6xl mx-auto px-6 py-5 
-                      flex flex-col md:flex-row 
-                      justify-between items-center 
-                      text-sm text-gray-700">
+    <footer className="bg-white border-t border-gray-200">
+      <div className="max-w-6xl mx-auto px-6 py-6">
 
-        <span>© {new Date().getFullYear()} Legal Digest</span>
+        <div className="flex flex-col md:flex-row justify-between gap-12">
 
-        <div className="flex gap-8 mt-4 md:mt-0">
-          <Link
-            href="/about"
-            className="relative hover:text-black transition group"
-          >
-            About
-            <span className="absolute left-0 -bottom-1 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full"></span>
-          </Link>
+          {/* Logo + Description */}
+          <div className="max-w-sm">
+            <Image
+              src="/logo.png"   // <-- yaha apna logo path daalna
+              alt="Legal Digest"
+              width={150}
+              height={50}
+              className="object-contain"
+            />
 
-          <Link
-            href="/feedback"
-            className="relative hover:text-black transition group"
-          >
-            Feedback
-            <span className="absolute left-0 -bottom-1 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full"></span>
-          </Link>
+            <p className="mt-5 text-sm text-gray-600 leading-relaxed">
+              Structured legal news, judgments and policy updates —
+              curated for modern legal readers.
+            </p>
+          </div>
+
+          {/* Links Section */}
+          <div className="flex gap-16 text-sm">
+
+            <div className="flex flex-col gap-3">
+              <span className="font-semibold text-[#2f4a63]">
+                Company
+              </span>
+
+              <Link
+                href="/about"
+                className="text-gray-600 hover:text-[#2f4a63] transition duration-200"
+              >
+                About
+              </Link>
+
+              <Link
+                href="/feedback"
+                className="text-gray-600 hover:text-[#2f4a63] transition duration-200"
+              >
+                Feedback
+              </Link>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <span className="font-semibold text-[#2f4a63]">
+                Explore
+              </span>
+
+              <Link
+                href="/"
+                className="text-gray-600 hover:text-[#2f4a63] transition duration-200"
+              >
+                Latest News
+              </Link>
+
+              <Link
+                href="/categories"
+                className="text-gray-600 hover:text-[#2f4a63] transition duration-200"
+              >
+                Categories
+              </Link>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Bottom */}
+        <div className="mt-7 pt-4 border-t border-gray-200 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500 gap-4">
+          <span>
+            © {new Date().getFullYear()} Legal Digest. All rights reserved.
+          </span>
+
+          <span className="text-xs text-gray-400">
+            Built for legal readers ⚖️
+          </span>
         </div>
 
       </div>

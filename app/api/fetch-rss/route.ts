@@ -10,41 +10,55 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-const feeds = [
-  {
-    url: "https://www.thehindu.com/news/national/feeder/default.rss",
-    category: "Legal",
-  },
-  {
-    url: "https://feeds.bbci.co.uk/news/rss.xml",
-    category: "General",
-  }, {
-    url: "https://feeds.bbci.co.uk/sport/rss.xml",
-    category: "Sports",
-  },
-  {
-    url: "https://economictimes.indiatimes.com/rssfeedsdefault.cms",
-    category: "Finance",
-  },
-  { url: "https://feeds.bbci.co.uk/news/world/rss.xml" , category: "Global"},
+const legalFeeds = [
+  // { url: "https://www.livelaw.in/rss", category: "Legal" },
+  // { url: "https://www.barandbench.com/rss", category: "Legal" },
+  { url: "https://www.thehindu.com/news/national/feeder/default.rss", category: "Legal" },
+];
+
+const generalFeeds = [
+  { url: "https://feeds.bbci.co.uk/news/rss.xml", category: "General" },
+  { url: "https://timesofindia.indiatimes.com/rssfeedsdefault.cms", category: "General" },
+  { url: "https://www.thehindu.com/news/feeder/default.rss", category: "General" },
+];
+
+const financeFeeds = [
+  { url: "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms", category: "Finance" },
+  { url: "https://www.moneycontrol.com/rss/latestnews.xml", category: "Finance" },
+  { url: "https://feeds.bbci.co.uk/news/business/rss.xml", category: "Finance" },
+];
+
+const sportsFeeds = [
+  { url: "https://feeds.bbci.co.uk/sport/rss.xml", category: "Sports" },
+  { url: "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms", category: "Sports" },
+  { url: "https://www.espncricinfo.com/rss/content/story/feeds/0.xml", category: "Sports" },
+];
+
+
+const globalFeeds = [
+  { url: "https://feeds.bbci.co.uk/news/world/rss.xml", category: "Global" },
+  // { url: "https://rss.cnn.com/rss/edition_world.rss", category: "Global" },
+  { url: "https://www.aljazeera.com/xml/rss/all.xml", category: "Global" },
 ];
 
 
 export async function GET() {
   try {
-
     let totalInserted = 0;
     const feedStats: any[] = [];
 
-    for (const feed of feeds) {
+    const allFeeds = [
+      ...legalFeeds,
+      ...generalFeeds,
+      ...financeFeeds,
+      ...sportsFeeds,
+      ...globalFeeds,
+    ];
 
+    for (const feed of allFeeds) {
       const rss = await parser.parseURL(feed.url);
-      console.log("Fetching feed:", feed.url);
-      console.log("Items count:", rss.items.length);
 
       let insertedForFeed = 0;
-
-      console.log("RSS items count:", rss.items.length);
 
       for (const item of rss.items) {
         const title = item.title?.trim();
@@ -53,44 +67,30 @@ export async function GET() {
 
         if (!title || !link) continue;
 
-        let finalCategory;
-
-        if (feed.url.includes("thehindu.com")) {
-          finalCategory = "Legal";
-        } else {
-          finalCategory = detectCategory(`${title} ${description}`);
-        }
-
         const payload = {
           title,
           url: link,
-          category: finalCategory,
-          description,
+          category: feed.category,
+          summary: description,
           published_at: item.pubDate
             ? new Date(item.pubDate).toISOString()
             : new Date().toISOString(),
         };
 
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("legal_news")
-          .insert(payload)
-          .select();
-
-        console.log("Insert result:", data);
-        console.log("Insert error:", error);
+          .upsert(payload, { onConflict: "url" });
 
         if (!error) {
           insertedForFeed++;
           totalInserted++;
         }
-
       }
 
       feedStats.push({
         feed: feed.url,
         totalItems: rss.items.length,
         inserted: insertedForFeed,
-        latestPubDate: rss.items[0]?.pubDate || null,
       });
     }
 
@@ -99,9 +99,8 @@ export async function GET() {
       totalInserted,
       feeds: feedStats,
     });
-  } catch (error: any) {
-    console.error("FULL ERROR:", error);
 
+  } catch (error: any) {
     return NextResponse.json({
       success: false,
       message: error?.message,
