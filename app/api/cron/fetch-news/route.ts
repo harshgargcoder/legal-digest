@@ -84,7 +84,7 @@ export async function GET() {
             title: item.title,
             summary: item.contentSnippet || "",
             url: item.link,
-            source: parsedFeed.title || feed.url,
+            source: new URL(item.link).hostname,
             category: feed.category,
             region: "Global",
             published_at: item.pubDate
