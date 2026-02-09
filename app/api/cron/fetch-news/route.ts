@@ -53,7 +53,9 @@ export async function GET() {
     const CRON_SECRET = process.env.CRON_SECRET;
 
     if (CRON_SECRET) {
-      const authHeader = headers().get("authorization");
+      const headersList = await headers();
+      const authHeader = headersList.get("authorization");
+
 
       if (!authHeader || authHeader !== `Bearer ${CRON_SECRET}`) {
         return NextResponse.json(
