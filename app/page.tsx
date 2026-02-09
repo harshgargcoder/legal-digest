@@ -10,7 +10,6 @@ import TrendingSidebar from "./components/TrendingSidebar";
 export default function Home() {
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
-  const [news, setNews] = useState<any[]>([]);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   useEffect(() => {
@@ -20,8 +19,11 @@ export default function Home() {
         const data = await res.json();
 
         if (data.success) {
-          setNews(data.articles || []);
-          setLastUpdated(data.lastUpdated || null);
+          setStats({
+            total: data.total,
+            uniqueSources: data.uniqueSources,
+            lastUpdated: data.lastUpdated,
+          });
         }
       } catch (err) {
         console.error("Failed to fetch stats");
@@ -31,15 +33,17 @@ export default function Home() {
     fetchStats();
   }, []);
 
-  // Stats Logic
-  const totalArticles = news.length;
-  const uniqueSources = [
-    ...new Set(news.map((item) => item.source).filter(Boolean)),
-  ].length;
 
   const lastUpdateText = lastUpdated
     ? new Date(lastUpdated).toLocaleString()
     : "—";
+
+  const [stats, setStats] = useState({
+    total: 0,
+    uniqueSources: 0,
+    lastUpdated: null as string | null,
+  });
+
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
@@ -51,7 +55,7 @@ export default function Home() {
 
         <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition">
           <p className="text-2xl font-semibold text-[#2f4a63]">
-            {totalArticles}
+            {stats.total}
           </p>
           <p className="text-sm text-gray-500 mt-1">
             Articles Indexed
@@ -60,7 +64,7 @@ export default function Home() {
 
         <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition">
           <p className="text-2xl font-semibold text-[#2f4a63]">
-            {uniqueSources}
+            {stats.uniqueSources}
           </p>
           <p className="text-sm text-gray-500 mt-1">
             Global Sources
@@ -69,7 +73,7 @@ export default function Home() {
 
         <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition">
           <p className="text-2xl font-semibold text-[#2f4a63]">
-            {lastUpdateText}
+            {stats.lastUpdated ? new Date(stats.lastUpdated).toLocaleString() : "—"}
           </p>
           <p className="text-sm text-gray-500 mt-1">
             Last Updated
