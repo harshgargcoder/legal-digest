@@ -86,7 +86,18 @@ export async function GET() {
             url: item.link,
             source: new URL(item.link).hostname,
             category: feed.category,
-            region: "Global",
+
+            region:
+              feed.url.includes("thehindu.com/news/national")
+                ? "National"
+                : feed.url.includes("timesofindia")
+                ? "National"
+                : feed.url.includes("economictimes")
+                ? "National"
+                : feed.url.includes("moneycontrol")
+                ? "National"
+                : "International",
+
             published_at: item.pubDate
               ? new Date(item.pubDate).toISOString()
               : new Date().toISOString(),

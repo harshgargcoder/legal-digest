@@ -1,32 +1,19 @@
-import NewsCard from "../components/news/NewsCard";
+"use client";
 
-async function getData() {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_BASE_URL}/api/get-news?region=Global`,
-    { cache: "no-store" }
-  );
-  return res.json();
-}
+import NewsFeed from "../components/news/NewsFeed";
 
-export default async function InternationalPage() {
-  const data = await getData();
-
+export default function InternationalPage() {
   return (
-    <div className="max-w-6xl mx-auto px-6 py-10">
-      <h1 className="text-4xl font-bold text-white mb-8">
+    <div className="max-w-7xl mx-auto px-6 py-10">
+      <h1 className="text-3xl font-semibold text-white mb-8">
         International News
       </h1>
 
-      <div className="grid gap-8">
-        {data.articles?.map((item: any, index: number) => (
-          <NewsCard
-            key={item.id}
-            item={item}
-            index={index}
-            activeCategory="International"
-          />
-        ))}
-      </div>
+      <NewsFeed
+        category="All"
+        search=""
+        region="International"
+      />
     </div>
   );
 }

@@ -6,9 +6,10 @@ import NewsCard from "./NewsCard";
 interface Props {
   category: string;
   search: string;
+  region?: string;
 }
 
-export default function NewsFeed({ category, search }: Props) {
+export default function NewsFeed({ category, search, region }: Props) {
   const [articles, setArticles] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -19,16 +20,22 @@ export default function NewsFeed({ category, search }: Props) {
 
     setLoading(true);
 
-    const baseUrl =
-      category === "All"
-        ? `/api/get-news?page=${pageNumber}&limit=10`
-        : `/api/get-news?category=${category}&page=${pageNumber}&limit=10`;
+    let url = `/api/get-news?page=${pageNumber}&limit=10`;
 
-    const finalUrl = search
-      ? `${baseUrl}&search=${encodeURIComponent(search)}`
-      : baseUrl;
+    if (category && category !== "All") {
+      url += `&category=${encodeURIComponent(category)}`;
+    }
 
-    const res = await fetch(finalUrl);
+    if (region) {
+      url += `&region=${encodeURIComponent(region)}`;
+    }
+
+    if (search) {
+      url += `&search=${encodeURIComponent(search)}`;
+    }
+
+    const res = await fetch(url);
+
 
     const data = await res.json();
     const newArticles = data.articles || [];
@@ -50,7 +57,7 @@ export default function NewsFeed({ category, search }: Props) {
     }, 300);
 
     return () => clearTimeout(delay);
-  }, [category, search]);
+  }, [category, search, region]);
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
