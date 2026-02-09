@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 interface Props {
   item: any;
   index: number;
@@ -29,6 +31,19 @@ export default function NewsCard({ item, index }: Props) {
           🔥 Top {index + 1}
         </div>
       )}
+
+      {/* IMAGE */}
+      {item.image_url && (
+        <div className="relative w-full h-48 sm:h-56 mb-4 rounded-xl overflow-hidden">
+          <Image
+            src={item.image_url}
+            alt={item.title}
+            fill
+            className="object-cover transition-transform duration-500 hover:scale-105"
+          />
+        </div>
+      )}
+
 
       {/* Title */}
       <h2 className="text-lg sm:text-xl font-semibold text-white leading-snug">

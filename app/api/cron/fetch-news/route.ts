@@ -84,6 +84,13 @@ export async function GET() {
             title: item.title,
             summary: item.contentSnippet || "",
             url: item.link,
+
+            image_url:
+              item.enclosure?.url ||
+              item["media:content"]?.$?.url ||
+              item["media:thumbnail"]?.$?.url ||
+              null,
+
             source: new URL(item.link).hostname,
             category: feed.category,
 
@@ -91,12 +98,12 @@ export async function GET() {
               feed.url.includes("thehindu.com/news/national")
                 ? "National"
                 : feed.url.includes("timesofindia")
-                ? "National"
-                : feed.url.includes("economictimes")
-                ? "National"
-                : feed.url.includes("moneycontrol")
-                ? "National"
-                : "International",
+                  ? "National"
+                  : feed.url.includes("economictimes")
+                    ? "National"
+                    : feed.url.includes("moneycontrol")
+                      ? "National"
+                      : "International",
 
             published_at: item.pubDate
               ? new Date(item.pubDate).toISOString()
