@@ -15,7 +15,7 @@ export default function Home() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch("/api/get-news?stats=true");
+        const res = await fetch("/api/get-news?stats=true", { cache: "no-store" });
         const data = await res.json();
 
         if (data.success) {
