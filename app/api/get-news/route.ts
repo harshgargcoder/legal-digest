@@ -16,35 +16,43 @@ export async function GET(request: Request) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // 🔥 STATS MODE (No Articles Fetch)
+    // 🔹 Always fetch last_updated once
+    const { data: settingsData } = await supabase
+      .from("settings")
+      .select("last_updated")
+      .eq("id", 1)
+      .single();
+
+    const lastUpdated = settingsData?.last_updated || null;
+
+    // ================================
+    // 🔥 STATS MODE
+    // ================================
     if (statsOnly) {
       const { count } = await supabase
         .from("legal_news")
         .select("*", { count: "exact", head: true });
 
-      const { data: sources } = await supabase
+      const { data: sourcesData } = await supabase
         .from("legal_news")
         .select("source");
 
-      const uniqueSources = [
-        ...new Set(sources?.map((s) => s.source).filter(Boolean))
-      ].length;
-
-      const { data: settingsData } = await supabase
-        .from("settings")
-        .select("last_updated")
-        .eq("id", 1)
-        .single();
+      const uniqueSources = new Set(
+        (sourcesData || [])
+          .map((item) => item.source)
+          .filter(Boolean),
+      ).size;
 
       return NextResponse.json({
         success: true,
         total: count || 0,
         uniqueSources,
-        lastUpdated: settingsData?.last_updated || null,
+        lastUpdated,
       });
     }
-
+    // ================================
     // 🔥 NORMAL NEWS FETCH
+    // ================================
     let query = supabase
       .from("legal_news")
       .select("*", { count: "exact" });
@@ -59,7 +67,7 @@ export async function GET(request: Request) {
 
     if (search && search.trim() !== "") {
       query = query.or(
-        `title.ilike.%${search}%,summary.ilike.%${search}%`
+        `title.ilike.%${search}%,summary.ilike.%${search}%`,
       );
     }
 
@@ -69,12 +77,6 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    const { data: settingsData } = await supabase
-      .from("settings")
-      .select("last_updated")
-      .eq("id", 1)
-      .single();
-
     return NextResponse.json({
       success: true,
       articles: data || [],
@@ -82,13 +84,14 @@ export async function GET(request: Request) {
       page,
       limit,
       hasMore: count ? to + 1 < count : false,
-      lastUpdated: settingsData?.last_updated || null,
+      lastUpdated,
     });
-
   } catch (error: any) {
+    console.error("GET /api/get-news error:", error);
+
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: error.message || "Something went wrong" },
+      { status: 500 },
     );
   }
 }
