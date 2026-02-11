@@ -89,6 +89,8 @@ serve(async () => {
       const xml = await response.text();
 
       const parsed = await parser.parseString(xml);
+      console.log("Feed URL:", feed.url);
+      console.log("Latest item pubDate:", parsed.items?.[0]?.pubDate);
 
       console.log(`Feed: ${feed.url} | Items: ${parsed.items.length}`);
 
@@ -116,9 +118,12 @@ serve(async () => {
             : new Date().toISOString(),
         };
 
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("legal_news")
-          .upsert(article, { onConflict: "url" });
+          .insert(article)
+          .select();
+
+        console.log("Insert result:", data, error);
 
         if (!error) inserted++;
       }
