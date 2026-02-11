@@ -6,29 +6,53 @@ const parser = new Parser();
 
 const supabase = createClient(
   Deno.env.get("PROJECT_URL")!,
-  Deno.env.get("SERVICE_ROLE_KEY")!
+  Deno.env.get("SERVICE_ROLE_KEY")!,
 );
 
 const legalFeeds = [
-  { url: "https://www.thehindu.com/news/national/feeder/default.rss", category: "Legal" },
+  {
+    url: "https://www.thehindu.com/news/national/feeder/default.rss",
+    category: "Legal",
+  },
 ];
 
 const generalFeeds = [
   { url: "https://feeds.bbci.co.uk/news/rss.xml", category: "General" },
-  { url: "https://timesofindia.indiatimes.com/rssfeedsdefault.cms", category: "General" },
-  { url: "https://www.thehindu.com/news/feeder/default.rss", category: "General" },
+  {
+    url: "https://timesofindia.indiatimes.com/rssfeedsdefault.cms",
+    category: "General",
+  },
+  {
+    url: "https://www.thehindu.com/news/feeder/default.rss",
+    category: "General",
+  },
 ];
 
 const financeFeeds = [
-  { url: "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms", category: "Finance" },
-  { url: "https://www.moneycontrol.com/rss/latestnews.xml", category: "Finance" },
-  { url: "https://feeds.bbci.co.uk/news/business/rss.xml", category: "Finance" },
+  {
+    url: "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+    category: "Finance",
+  },
+  {
+    url: "https://www.moneycontrol.com/rss/latestnews.xml",
+    category: "Finance",
+  },
+  {
+    url: "https://feeds.bbci.co.uk/news/business/rss.xml",
+    category: "Finance",
+  },
 ];
 
 const sportsFeeds = [
   { url: "https://feeds.bbci.co.uk/sport/rss.xml", category: "Sports" },
-  { url: "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms", category: "Sports" },
-  { url: "https://www.espncricinfo.com/rss/content/story/feeds/0.xml", category: "Sports" },
+  {
+    url: "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms",
+    category: "Sports",
+  },
+  {
+    url: "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
+    category: "Sports",
+  },
 ];
 
 const globalFeeds = [
@@ -49,7 +73,24 @@ serve(async () => {
 
   for (const feed of allFeeds) {
     try {
-      const parsed = await parser.parseURL(feed.url);
+      const response = await fetch(feed.url + `?t=${Date.now()}`, {
+        headers: {
+          "User-Agent": "Mozilla/5.0",
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
+        },
+      });
+
+      if (!response.ok) {
+        console.error("Fetch failed:", feed.url, response.status);
+        continue;
+      }
+
+      const xml = await response.text();
+
+      const parsed = await parser.parseString(xml);
+
+      console.log(`Feed: ${feed.url} | Items: ${parsed.items.length}`);
 
       for (const item of parsed.items) {
         if (!item.title || !item.link) continue;
@@ -58,20 +99,18 @@ serve(async () => {
           title: item.title,
           summary: item.contentSnippet || "",
           url: item.link,
-          image_url:
-            item.enclosure?.url ||
+          image_url: item.enclosure?.url ||
             item["media:content"]?.$?.url ||
             item["media:thumbnail"]?.$?.url ||
             null,
           source: new URL(item.link).hostname,
           category: feed.category,
-          region:
-            feed.url.includes("thehindu.com") ||
-            feed.url.includes("timesofindia") ||
-            feed.url.includes("economictimes") ||
-            feed.url.includes("moneycontrol")
-              ? "National"
-              : "International",
+          region: feed.url.includes("thehindu.com") ||
+              feed.url.includes("timesofindia") ||
+              feed.url.includes("economictimes") ||
+              feed.url.includes("moneycontrol")
+            ? "National"
+            : "International",
           published_at: item.pubDate
             ? new Date(item.pubDate).toISOString()
             : new Date().toISOString(),
@@ -83,7 +122,9 @@ serve(async () => {
 
         if (!error) inserted++;
       }
-    } catch {}
+    } catch (err) {
+      console.error("Feed error:", feed.url, err);
+    }
   }
 
   await supabase
@@ -93,6 +134,6 @@ serve(async () => {
 
   return new Response(
     JSON.stringify({ success: true, inserted }),
-    { headers: { "Content-Type": "application/json" } }
+    { headers: { "Content-Type": "application/json" } },
   );
 });
