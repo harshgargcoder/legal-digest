@@ -50,8 +50,8 @@ export default function Home() {
 
       <HeroSection search={search} setSearch={setSearch} />
 
-      {/* STATUS STRIP */}
-      {/* <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-14">
+      {/*STATUS STRIP */}
+       <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-14">
 
         <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-md transition">
           <p className="text-2xl font-semibold text-[#2f4a63]">
@@ -89,7 +89,7 @@ export default function Home() {
           </p>
         </div>
 
-      </div> */}
+      </div>
 
       <CategoryFilter
         category={category}
