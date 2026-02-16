@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
+import Navbar from "@/app/components/Navbar";
+import Footer from "@/app/components/Footer";
 import Script from "next/script";
 
 const GA_ID = "G-Z6NGF984TS";
@@ -19,29 +19,32 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Legal-Digest",
+  description:
+    "Your daily dose of legal news, insights, and analysis. Stay informed with our curated feed of the latest developments in law, politics, finance, sports, and global affairs. Legal-Digest: Where law meets the world.",
   icons: {
-    icon: "./logo1.png",
+    icon: "/logo1.png", // fixed path
   },
-  description: "Your daily dose of legal news, insights, and analysis. Stay informed with our curated feed of the latest developments in law, politics, finance, sports, and global affairs. Legal-Digest: Where law meets the world.",
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Navbar />
+
         <main className="min-h-screen">
           {children}
         </main>
+
         <Footer />
 
-        {/* Google tag (gtag.js) */}
+        {/* Google Analytics */}
         <Script
           src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
           strategy="afterInteractive"

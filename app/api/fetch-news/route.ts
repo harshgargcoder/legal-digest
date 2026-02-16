@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabse";
+import { supabase } from "@/lib/supabase";
 import { filterArticles, RawArticle } from "@/lib/filter";
 
 export async function POST() {

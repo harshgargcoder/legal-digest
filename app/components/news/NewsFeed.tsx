@@ -69,18 +69,33 @@ export default function NewsFeed({ category, search, region }: Props) {
 
   return (
     <>
-      {/* FEATURED BIG CARD */}
       {articles.length > 0 && (
-        <div className="mb-10 p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 backdrop-blur-xl">
-          <span className="text-xs bg-indigo-600 text-white px-3 py-1 rounded-full">
+        <div
+          className="
+          mb-10 p-6 sm:p-8 rounded-2xl transition-all duration-500
+
+          /* Light Mode */
+          bg-white border border-gray-200 shadow-md
+
+          /* Dark Mode */
+          dark:bg-gradient-to-br
+        dark:from-indigo-900/60
+        dark:to-purple-900/60
+        dark:border-indigo-500/30
+          dark:shadow-lg
+          dark:backdrop-blur-xl
+          hover:shadow-xl
+        "
+        >
+          <span className="text-xs px-3 py-1 rounded-full font-medium bg-indigo-600 text-white">
             🔥 Breaking Intelligence
           </span>
 
-          <h2 className="text-xl sm:text-2xl font-bold text-white mt-4">
+          <h2 className="text-xl sm:text-2xl font-bold mt-4 text-gray-900 dark:text-white leading-snug">
             {articles[0].title}
           </h2>
 
-          <p className="text-gray-300 mt-3 text-sm sm:text-base">
+          <p className="mt-3 text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
             {articles[0].summary}
           </p>
 
@@ -88,14 +103,18 @@ export default function NewsFeed({ category, search, region }: Props) {
             href={articles[0].url}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-block mt-4 text-indigo-300 hover:text-white transition"
+            className="
+            inline-block mt-5 font-medium transition
+
+            text-indigo-600 hover:text-indigo-800
+            dark:text-indigo-300 dark:hover:text-white
+          "
           >
             Read Full →
           </a>
         </div>
       )}
 
-      {/* GRID */}
       <div className="grid gap-6 sm:gap-8">
         {slicedArticles.map((item: any, index: number) => (
           <NewsCard
@@ -107,13 +126,22 @@ export default function NewsFeed({ category, search, region }: Props) {
         ))}
       </div>
 
-      {/* LOAD MORE BUTTON */}
       {hasMore && (
-        <div className="flex justify-center mt-10">
+        <div className="flex justify-center mt-12">
           <button
             onClick={handleLoadMore}
             disabled={loading}
-            className="px-6 py-3 cursor-pointer rounded-xl bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition disabled:opacity-50"
+            className="
+            px-6 py-3 rounded-xl font-medium transition-all duration-300
+
+            /* Light */
+            bg-indigo-600 text-white hover:bg-indigo-700 shadow-md
+
+            /* Dark */
+            dark:bg-indigo-500 dark:hover:bg-indigo-600
+
+            disabled:opacity-50 disabled:cursor-not-allowed
+          "
           >
             {loading ? "Loading..." : "Load More"}
           </button>
@@ -121,4 +149,5 @@ export default function NewsFeed({ category, search, region }: Props) {
       )}
     </>
   );
+
 }

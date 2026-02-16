@@ -13,7 +13,8 @@ export default function TrendingSidebar({ setSearch }: Props) {
 
   return (
     <div className="sticky top-24">
-      <h3 className="text-lg font-semibold text-white">
+
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
         Trending Topics
       </h3>
 
@@ -22,14 +23,18 @@ export default function TrendingSidebar({ setSearch }: Props) {
           <div
             key={index}
             onClick={() => setSearch(topic)}
-            className="border border-white/20 rounded-xl px-4 py-3 text-sm 
-                       text-white hover:bg-white/10 
-                       transition cursor-pointer"
+            className="
+            border rounded-xl px-4 py-3 text-sm cursor-pointer transition-all duration-200
+
+            bg-white border-gray-200 text-gray-700 hover:bg-gray-100 shadow-sm
+            dark:bg-zinc-900 dark:border-white/20 dark:text-gray-300 dark:hover:bg-white/10
+          "
           >
             {topic}
           </div>
         ))}
       </div>
+
     </div>
   );
 }
