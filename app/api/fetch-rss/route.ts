@@ -15,8 +15,7 @@ console.log(
 );
 
 const legalFeeds = [
-  // { url: "https://www.livelaw.in/rss", category: "Legal" },
-  // { url: "https://www.barandbench.com/rss", category: "Legal" },
+  { url: "https://indianexpress.com/section/india/feed/", category: "Legal" },
   {
     url: "https://www.thehindu.com/news/national/feeder/default.rss",
     category: "Legal",
@@ -26,7 +25,7 @@ const legalFeeds = [
 const generalFeeds = [
   { url: "https://feeds.bbci.co.uk/news/rss.xml", category: "General" },
   {
-    url: "https://timesofindia.indiatimes.com/rssfeedsdefault.cms",
+    url: "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms",
     category: "General",
   },
   {
@@ -64,7 +63,6 @@ const sportsFeeds = [
 
 const globalFeeds = [
   { url: "https://feeds.bbci.co.uk/news/world/rss.xml", category: "Global" },
-  // { url: "https://rss.cnn.com/rss/edition_world.rss", category: "Global" },
   { url: "https://www.aljazeera.com/xml/rss/all.xml", category: "Global" },
 ];
 
@@ -101,7 +99,9 @@ export async function GET() {
           region: feed.url.includes("thehindu.com") ||
               feed.url.includes("timesofindia") ||
               feed.url.includes("economictimes") ||
-              feed.url.includes("moneycontrol")
+              feed.url.includes("moneycontrol") ||
+              feed.url.includes("bbci.in") ||
+              feed.url.includes("indianexpress.com")
             ? "National"
             : "International",
           published_at: item.pubDate
