@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { filterArticles, RawArticle } from "@/lib/filter";
+import { filterArticles, RawArticle } from "@/supabase/functions/_shared/filter";
 
 export async function POST() {
   try {

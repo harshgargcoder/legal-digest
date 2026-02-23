@@ -6,29 +6,27 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import AuthModal from "./auth/AuthModal";
 import { supabase } from "@/lib/supabase";
-import { Bookmark } from "lucide-react";
+import { useSearch } from "@/app/context/SearchContext";
 
 export default function Navbar() {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const { search, setSearch } = useSearch();
+
+  const [authOpen, setAuthOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    // Get current user
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
     });
 
-    // Listen to auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const handleLogout = async () => {
@@ -39,74 +37,62 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="w-full sticky top-0 z-50 bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+      <nav className="w-full sticky top-0 z-50 bg-white dark:bg-[#0b1220] border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
 
-          {/* Logo */}
+          {/* LEFT — Logo */}
           <Image
             src="/logo.png"
             alt="Legal Digest"
-            width={160}
-            height={40}
-            className="cursor-pointer"
-            onClick={() => {
-              router.push("/");
-              router.refresh();
-            }}
+            width={140}
+            height={35}
+            className="cursor-pointer w-[120px] sm:w-[140px] h-auto"
+            onClick={() => router.push("/")}
           />
-          {/* Navigation */}
-          <div className="flex items-center gap-6 sm:gap-10 text-sm sm:text-base font-medium">
 
-            {user && (
-              <Link
-                href="/bookmarks"
-                className="flex gap-2 text-gray-600 hover:text-black transition"
-              >
-                <Bookmark size={18} />
-                <span>Bookmarks</span>
-              </Link>
-            )}
+          {/* RIGHT SIDE */}
+          <div className="flex items-center gap-6">
+
             <Link
               href="/national"
-              className="relative text-gray-600 hover:text-black transition group"
+              className="text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition"
             >
               National
-              <span className="absolute left-0 -bottom-1 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full"></span>
             </Link>
 
             <Link
               href="/international"
-              className="relative text-gray-600 hover:text-black transition group"
+              className="text-gray-600 dark:text-gray-300 hover:text-black dark:hover:text-white transition"
             >
               International
-              <span className="absolute left-0 -bottom-1 h-[2px] w-0 bg-black transition-all duration-300 group-hover:w-full"></span>
             </Link>
 
-            {/* Auth Section */}
+            {/* Search */}
+            <div className="relative w-56">
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search..."
+                className="w-full bg-gray-100 dark:bg-black/40 border border-gray-300 dark:border-indigo-500/30 rounded-lg pl-9 pr-4 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:border-indigo-500 dark:focus:border-indigo-400 transition"
+              />
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-indigo-500">
+                🔎
+              </span>
+            </div>
+
+            {/* Auth */}
             {user ? (
-              <div className="flex items-center gap-3">
-                {/* Avatar */}
-                <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center text-sm font-semibold">
-                  {user.email?.charAt(0).toUpperCase()}
-                </div>
-
-                {/* Username / Email */}
-                <span className="text-sm text-gray-700 hidden sm:block">
-                  {user.user_metadata?.full_name || user.email}
-                </span>
-
-                {/* Logout */}
-                <button
-                  onClick={handleLogout}
-                  className="text-red-500 hover:text-red-700 cursor-pointer transition"
-                >
-                  Logout
-                </button>
-              </div>
+              <button
+                onClick={handleLogout}
+                className="text-red-500 hover:text-red-700 transition"
+              >
+                Logout
+              </button>
             ) : (
               <button
-                onClick={() => setOpen(true)}
-                className="bg-black text-white px-4 py-1.5 rounded-md cursor-pointer hover:bg-gray-800 transition"
+                onClick={() => setAuthOpen(true)}
+                className="bg-white text-black px-4 py-1.5 rounded-md hover:bg-gray-200 transition"
               >
                 Login
               </button>
@@ -114,8 +100,8 @@ export default function Navbar() {
           </div>
         </div>
       </nav>
-      {/* Auth Modal */}
-      <AuthModal isOpen={open} onClose={() => setOpen(false)} />
+
+      <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
     </>
   );
 }

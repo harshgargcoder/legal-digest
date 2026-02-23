@@ -4,6 +4,8 @@ import "./globals.css";
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
 import Script from "next/script";
+import { Search } from "lucide-react";
+import { SearchProvider } from "./context/SearchContext";
 
 const GA_ID = "G-Z6NGF984TS";
 
@@ -36,27 +38,29 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navbar />
+        <SearchProvider>
+          <Navbar />
 
-        <main className="min-h-screen">
-          {children}
-        </main>
+          <main className="min-h-screen">
+            {children}
+          </main>
 
-        <Footer />
+          <Footer />
 
-        {/* Google Analytics */}
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-          strategy="afterInteractive"
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
+          {/* Google Analytics */}
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+            strategy="afterInteractive"
+          />
+          <Script id="google-analytics" strategy="afterInteractive">
+            {`
             window.dataLayer = window.dataLayer || [];
             function gtag(){dataLayer.push(arguments);}
             gtag('js', new Date());
             gtag('config', '${GA_ID}');
           `}
-        </Script>
+          </Script>
+        </SearchProvider>
       </body>
     </html>
   );
