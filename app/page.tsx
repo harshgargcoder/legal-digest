@@ -79,7 +79,7 @@ export default function Home() {
             className="relative group rounded-2xl overflow-hidden"
           >
             {/* Gradient Border */}
-            <div className="absolute inset-0 rounded-2xl p-[1px] bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 opacity-70 group-hover:opacity-100 transition-all duration-500"></div>
+            <div className="absolute inset-0 rounded-2xl p-px bg-gradient-to-r from-cyan-400 via-blue-500 to-indigo-500 opacity-70 group-hover:opacity-100 transition-all duration-500"></div>
 
             {/* Glow Effect (Dark Mode Only) */}
             <div className="absolute inset-0 rounded-2xl blur-2xl bg-gradient-to-r from-cyan-500/40 via-blue-500/40 to-indigo-500/40 opacity-0 group-hover:opacity-100 transition-all duration-500 hidden dark:block"></div>
