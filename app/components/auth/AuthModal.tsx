@@ -84,19 +84,18 @@ export default function AuthModal({ isOpen, onClose }: Props) {
     <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50">
 
       <div className="w-[380px] 
-                    bg-white/90 dark:bg-zinc-900/90 
-                    backdrop-blur-xl 
-                    border border-white/20 dark:border-zinc-700 
-                    rounded-3xl 
-                    p-8 
-                    shadow-2xl 
-                    transition-all duration-300">
+                bg-white dark:bg-zinc-900
+                border border-gray-200 dark:border-zinc-700
+                rounded-3xl 
+                p-8 
+                shadow-2xl 
+                transition-all duration-300">
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           {/* Dark mode logo */}
           <Image
-            src="/logo-light.png"
+            src="/logo-dark.png"
             alt="Legal Digest"
             width={180}
             height={20}
@@ -104,11 +103,12 @@ export default function AuthModal({ isOpen, onClose }: Props) {
           />
           {/* Light mode logo */}
           <Image
-            src="/logo-dark.png"
+            src="/logo-light.png"
             alt="Legal Digest"
             width={180}
             height={20}
-            className="block dark:hidden"
+            className="block dark:hidden bg-white/60 rounded-md p-1"
+           
           />
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-500 text-center tracking-wide">
             Clarity in Law. Insight for the World.

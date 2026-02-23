@@ -25,9 +25,6 @@ export async function GET(request: Request) {
 
     const lastUpdated = settingsData?.last_updated || null;
 
-    // ================================
-    // 🔥 STATS MODE
-    // ================================
     if (statsOnly) {
       const { count } = await supabase
         .from("legal_news")
@@ -50,9 +47,7 @@ export async function GET(request: Request) {
         lastUpdated,
       });
     }
-    // ================================
-    // 🔥 NORMAL NEWS FETCH
-    // ================================
+
     let query = supabase
       .from("legal_news")
       .select("*", { count: "exact" });

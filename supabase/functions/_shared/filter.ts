@@ -51,7 +51,7 @@ const financeRegex = buildRegex([
   "currency","forex","rupee","dollar",
   "audit","chartered accountant","icai","gst","income tax",
   "tds","itr","balance sheet","financial statements","ledger",
-  "compliance","tax audit","capital gains"
+  "compliance","tax audit","capital gains","ca","cma","cfo","finance minister"
 ]);
 
 const legalRegex = buildRegex([
