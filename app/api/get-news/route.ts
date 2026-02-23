@@ -66,8 +66,9 @@ export async function GET(request: Request) {
     }
 
     if (search && search.trim() !== "") {
+      const formatted = `%${search.trim()}%`;
       query = query.or(
-        `title.ilike.%${search}%,summary.ilike.%${search}%`,
+        `title.ilike.${formatted},summary.ilike.${formatted},content.ilike.${formatted}`,
       );
     }
 
