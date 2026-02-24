@@ -19,10 +19,7 @@ serve(async () => {
     { url: "https://feeds.bbci.co.uk/news/rss.xml" },
     { url: "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms" },
     { url: "https://www.thehindu.com/news/feeder/default.rss" },
-    {
-      url:
-        "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
-    },
+    { url:"https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"},
     { url: "https://www.moneycontrol.com/rss/latestnews.xml" },
     { url: "https://feeds.bbci.co.uk/news/business/rss.xml" },
     { url: "https://feeds.bbci.co.uk/sport/rss.xml" },
@@ -30,6 +27,12 @@ serve(async () => {
     { url: "https://www.espncricinfo.com/rss/content/story/feeds/0.xml" },
     { url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
     { url: "https://www.aljazeera.com/xml/rss/all.xml" },
+    { url: "https://legalbites.in/feed/" },
+    { url: "https://abovethelaw.com/feed/" },
+    { url: "https://lawandcrime.com/feed/" },
+    { url: "https://news.google.com/rss/search?q=GST+India" },
+    { url: "https://news.google.com/rss/search?q=Chartered+Accountant+India" },
+    { url: "https://news.google.com/rss/search?q=ICAI" },
   ];
 
   let totalInserted = 0;

@@ -51,7 +51,9 @@ const financeRegex = buildRegex([
   "currency","forex","rupee","dollar",
   "audit","chartered accountant","icai","gst","income tax",
   "tds","itr","balance sheet","financial statements","ledger",
-  "compliance","tax audit","capital gains","ca","cma","cfo","finance minister"
+  "compliance","tax audit","capital gains","ca","cma","cfo",
+  "finance minister","economic survey","monetary policy","fiscal policy",
+  "fdi",
 ]);
 
 const legalRegex = buildRegex([
@@ -59,14 +61,27 @@ const legalRegex = buildRegex([
   "judgment","verdict","order","petition","appeal",
   "constitutional","criminal","civil suit",
   "parliament","bill","act","legislation",
-  "regulation","gazette","pil","amendment"
+  "regulation","gazette","pil","amendment",
+  "article","section","clause","subsection",
+  "verdict","trial","prosecution","defense","lawyer",
+  "advocate","judge","justice", "crime","case",
+  "hearing","witness","evidence","act"
 ]);
 
 const globalRegex = buildRegex([
   "united states","china","russia","ukraine",
   "israel","gaza","iran","north korea","europe",
   "war","conflict","sanction","refugee",
-  "climate change","pandemic","covid"
+  "climate change","pandemic","covid","plague",
+  "earthquake","hurricane","flood","tsunami",
+  "drought","wildfire","nuclear","cyber attack",
+  "terrorism","terrorist","terror","g20",
+  "world economic forum","world health organization",
+  "united nations","nato","eu","european union","africa","asia",
+  "global warming","greenhouse","carbon","emission","sustainability",
+  "renewable energy","solar","wind","electric vehicle","ev",
+  "climate summit","climate action","climate crisis","climate emergency",
+  "greenhouse effect","carbon footprint","solar power","wind power",
 ]);
 
 export function detectCategory(text: string): string {
