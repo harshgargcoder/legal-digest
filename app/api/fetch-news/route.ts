@@ -20,7 +20,7 @@ export async function POST() {
 
     for (const article of processed) {
       const { error } = await supabase
-        .from("legal_news") // table name same rakho
+        .from("legal_news")
         .upsert(article, { onConflict: "url" });
 
       if (!error) insertedCount++;
@@ -40,7 +40,7 @@ export async function POST() {
 
 export async function GET() {
   const { data } = await supabase
-    .from("news")
+    .from("legal_news")
     .select("*")
     .order("score", { ascending: false })
     .order("published_at", { ascending: false })

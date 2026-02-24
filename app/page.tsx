@@ -10,7 +10,7 @@ import NewsletterCTA from "./components/NewsLetterCTA";
 import TrendingSidebar from "./components/TrendingSidebar";
 
 export default function Home() {
-  const { search, setSearch } = useSearch(); // ✅ use global search
+  const { search, setSearch } = useSearch();
 
   const [category, setCategory] = useState("All");
 

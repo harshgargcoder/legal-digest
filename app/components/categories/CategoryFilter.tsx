@@ -5,7 +5,7 @@ interface Props {
   setCategory: React.Dispatch<React.SetStateAction<string>>;
 }
 
-const categories = ["All", "Legal", "Finance", "Sports", "Global"];
+const categories = ["All", "Legal", "Finance", "Sports", "General", "Global"];
 
 export default function CategoryFilter({
   category,

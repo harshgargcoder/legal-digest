@@ -22,7 +22,6 @@ export default function Navbar() {
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // ================= AUTH =================
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user);
@@ -37,12 +36,10 @@ export default function Navbar() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Close mobile menu on route change
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
-  // ================= SEARCH =================
   useEffect(() => {
     const fetchResults = async () => {
       if (!search.trim()) {
@@ -70,7 +67,6 @@ export default function Navbar() {
     return () => clearTimeout(debounce);
   }, [search]);
 
-  // Close search dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
