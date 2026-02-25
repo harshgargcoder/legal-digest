@@ -16,7 +16,6 @@ export async function GET(request: Request) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    // 🔹 Always fetch last_updated once
     const { data: settingsData } = await supabase
       .from("settings")
       .select("last_updated")

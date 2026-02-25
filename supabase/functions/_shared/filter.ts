@@ -20,8 +20,12 @@ export interface ProcessedArticle {
   published_at: string;
 }
 
-const buildRegex = (keywords: string[]) =>
-  new RegExp(`\\b(${keywords.join("|")})\\b`, "i");
+const buildRegex = (keywords: string[]) => {
+  const escaped = keywords.map(k =>
+    k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  );
+  return new RegExp(`\\b(${escaped.join("|")})\\b`, "i");
+};
 
 const rejectRegex = buildRegex([
   "box office",
@@ -30,78 +34,132 @@ const rejectRegex = buildRegex([
   "tv show",
   "reality show",
   "fashion week",
+  "entertainment",
+  "gossip",
+  "red carpet"
 ]);
 
-export function isAllowed(title: string): boolean {
-  return !rejectRegex.test(title.toLowerCase());
+export function isAllowed(title: string, description?: string): boolean {
+  const text = `${title} ${description ?? ""}`.toLowerCase();
+  return !rejectRegex.test(text);
 }
 
 const sportsRegex = buildRegex([
-  "cricket","football","soccer","tennis","basketball","badminton","hockey",
-  "chess","kabaddi","golf","formula 1","f1","boxing","wrestling",
-  "world cup","olympics","ipl","t20","champions league","premier league",
-  "grand slam","wimbledon","us open","french open",
-  "tournament","championship","goal","wicket","century",
-  "coach","captain","injury","athlete","medal"
+  "cricket","football","soccer","tennis","basketball",
+  "badminton","hockey","chess","kabaddi","golf",
+  "formula 1","f1","boxing","wrestling",
+  "world cup","olympics","ipl","t20",
+  "champions league","premier league",
+  "grand slam","wimbledon","us open","french open"
 ]);
 
 const financeRegex = buildRegex([
-  "stock market","share market","stocks","trading","ipo","sensex","nifty",
-  "gdp","inflation","interest rate","repo rate","budget",
+  "stock market","share market","stocks","trading","ipo",
+  "sensex","nifty","gdp","inflation",
+  "interest rate","repo rate",
   "currency","forex","rupee","dollar",
-  "audit","chartered accountant","icai","gst","income tax",
-  "tds","itr","balance sheet","financial statements","ledger",
-  "compliance","tax audit","capital gains","ca","cma","cfo",
-  "finance minister","economic survey","monetary policy","fiscal policy",
-  "fdi",
+  "audit","chartered accountant","icai","gst",
+  "income tax","tds","itr",
+  "balance sheet","financial statements",
+  "tax audit","capital gains",
+  "finance minister","economic survey",
+  "monetary policy","fiscal policy","fdi"
+]);
+
+const supremeCourtRegex = buildRegex([
+  "supreme court of india",
+  "supreme court",
+  "chief justice of india",
+  "cji",
+  "sc verdict",
+  "sc order",
+  "sc judgment"
+]);
+
+const highCourtRegex = buildRegex([
+  "high court",
+  "division bench",
+  "single judge bench",
+  "delhi high court",
+  "bombay high court",
+  "madras high court",
+  "calcutta high court",
+  "karnataka high court",
+  "allahabad high court"
+]);
+
+const constitutionalRegex = buildRegex([
+  "article 14","article 19","article 21",
+  "article 32","article 226",
+  "constitutional validity",
+  "basic structure doctrine",
+  "fundamental rights",
+  "constitutional challenge"
 ]);
 
 const legalRegex = buildRegex([
-  "supreme court","high court","tribunal","bench",
-  "judgment","verdict","order","petition","appeal",
-  "constitutional","criminal","civil suit",
-  "parliament","bill","act","legislation",
-  "regulation","gazette","pil","amendment",
-  "article","section","clause","subsection",
-  "verdict","trial","prosecution","defense","lawyer",
-  "advocate","judge","justice", "crime","case",
-  "hearing","witness","evidence","act"
+  "tribunal",
+  "national green tribunal",
+  "nclt","nclat",
+  "pil",
+  "writ petition",
+  "special leave petition",
+  "bail plea",
+  "stay order",
+  "bar council"
 ]);
 
 const globalRegex = buildRegex([
-  "united states","china","russia","ukraine",
-  "israel","gaza","iran","north korea","europe",
-  "war","conflict","sanction","refugee",
-  "climate change","pandemic","covid","plague",
-  "earthquake","hurricane","flood","tsunami",
-  "drought","wildfire","nuclear","cyber attack",
-  "terrorism","terrorist","terror","g20",
-  "world economic forum","world health organization",
-  "united nations","nato","eu","european union","africa","asia",
-  "global warming","greenhouse","carbon","emission","sustainability",
-  "renewable energy","solar","wind","electric vehicle","ev",
-  "climate summit","climate action","climate crisis","climate emergency",
-  "greenhouse effect","carbon footprint","solar power","wind power",
+  "united states","china","russia",
+  "ukraine","israel","gaza","iran",
+  "north korea","nato","united nations",
+  "world health organization",
+  "european union","g20",
+  "climate summit","climate crisis",
+  "carbon emission","renewable energy"
+]);
+
+const indiaRegex = buildRegex([
+  "india","delhi","mumbai","kolkata","chennai",
+  "bengaluru","hyderabad",
+  "supreme court of india",
+  "rbi","sebi","parliament of india"
 ]);
 
 export function detectCategory(text: string): string {
   const lower = text.toLowerCase();
 
-  if (sportsRegex.test(lower)) return "Sports";
-  if (financeRegex.test(lower)) return "Finance";
+  // 1️⃣ Court matters (highest priority)
+  if (supremeCourtRegex.test(lower)) return "Supreme Court";
+  if (highCourtRegex.test(lower)) return "High Court";
+
+  // 2️⃣ Constitutional
+  if (constitutionalRegex.test(lower)) return "Constitutional";
+
+  // 3️⃣ Legal
   if (legalRegex.test(lower)) return "Legal";
+
+  // 4️⃣ Finance & Sports
+  if (financeRegex.test(lower)) return "Finance";
+  if (sportsRegex.test(lower)) return "Sports";
+
+  // 5️⃣ Global
   if (globalRegex.test(lower)) return "Global";
 
   return "General";
 }
 
-const indiaRegex = buildRegex([
-  "india","delhi","mumbai","kolkata","chennai",
-  "supreme court of india","rbi","sebi"
-]);
-
 export function detectRegion(text: string): string {
-  return indiaRegex.test(text.toLowerCase()) ? "India" : "Global";
+  const lower = text.toLowerCase();
+  return indiaRegex.test(lower) ? "India" : "Global";
+}
+
+export function categorizeArticle(title: string, description: string) {
+  const combined = `${title} ${description}`;
+  return {
+    category: detectCategory(combined),
+    region: detectRegion(combined),
+  };
 }
 
 export function filterArticles(
@@ -126,7 +184,7 @@ export function filterArticles(
       };
     })
     .sort((a, b) => {
-      const priority = ["Legal", "Finance", "Sports", "Global", "General"];
+      const priority = ["Supreme Court", "High Court", "Legal", "Constitutional", "General","Finance", "Sports", "Global"];
       return priority.indexOf(a.category) - priority.indexOf(b.category);
     });
 }

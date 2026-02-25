@@ -1,7 +1,11 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import Parser from "npm:rss-parser@3.13.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { detectCategory, detectRegion } from "../_shared/filter.ts";
+import {
+  categorizeArticle,
+  detectCategory,
+  detectRegion,
+} from "../_shared/filter.ts";
 
 const parser = new Parser({
   headers: { "User-Agent": "Mozilla/5.0" },
@@ -14,25 +18,54 @@ serve(async () => {
   );
 
   const allFeeds = [
-    { url: "https://indianexpress.com/section/india/feed/" },
-    { url: "https://www.thehindu.com/news/national/feeder/default.rss" },
-    { url: "https://feeds.bbci.co.uk/news/rss.xml" },
-    { url: "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms" },
-    { url: "https://www.thehindu.com/news/feeder/default.rss" },
-    { url:"https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"},
-    { url: "https://www.moneycontrol.com/rss/latestnews.xml" },
-    { url: "https://feeds.bbci.co.uk/news/business/rss.xml" },
-    { url: "https://feeds.bbci.co.uk/sport/rss.xml" },
-    { url: "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms" },
-    { url: "https://www.espncricinfo.com/rss/content/story/feeds/0.xml" },
-    { url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
-    { url: "https://www.aljazeera.com/xml/rss/all.xml" },
-    { url: "https://legalbites.in/feed/" },
-    { url: "https://abovethelaw.com/feed/" },
-    { url: "https://lawandcrime.com/feed/" },
-    { url: "https://news.google.com/rss/search?q=GST+India" },
-    { url: "https://news.google.com/rss/search?q=Chartered+Accountant+India" },
-    { url: "https://news.google.com/rss/search?q=ICAI" },
+    // 🟣 INDIA / GENERAL
+    { url: "https://indianexpress.com/section/india/feed/", type: "general" },
+    {
+      url: "https://www.thehindu.com/news/national/feeder/default.rss",
+      type: "general",
+    },
+    {
+      url: "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms",
+      type: "general",
+    },
+
+    // 🌍 GLOBAL
+    { url: "https://feeds.bbci.co.uk/news/rss.xml", type: "global" },
+    { url: "https://feeds.bbci.co.uk/news/world/rss.xml", type: "global" },
+    { url: "https://www.aljazeera.com/xml/rss/all.xml", type: "global" },
+
+    // 💰 FINANCE
+    {
+      url:
+        "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
+      type: "finance",
+    },
+    { url: "https://www.moneycontrol.com/rss/latestnews.xml", type: "finance" },
+    { url: "https://feeds.bbci.co.uk/news/business/rss.xml", type: "finance" },
+
+    // 🏏 SPORTS
+    { url: "https://feeds.bbci.co.uk/sport/rss.xml", type: "sports" },
+    {
+      url: "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms",
+      type: "sports",
+    },
+    {
+      url: "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
+      type: "sports",
+    },
+
+    // ⚖️ LEGAL
+    { url: "https://legalbites.in/feed/", type: "legal" },
+    { url: "https://abovethelaw.com/feed/", type: "legal" },
+    { url: "https://lawandcrime.com/feed/", type: "legal" },
+
+    // 🧾 CA / GST (Finance-Legal Hybrid)
+    { url: "https://news.google.com/rss/search?q=GST+India", type: "finance" },
+    {
+      url: "https://news.google.com/rss/search?q=Chartered+Accountant+India",
+      type: "finance",
+    },
+    { url: "https://news.google.com/rss/search?q=ICAI", type: "finance" },
   ];
 
   let totalInserted = 0;
@@ -67,14 +100,18 @@ serve(async () => {
           source = feed.url;
         }
 
-        const combinedText = `
-          ${item.title ?? ""}
-          ${item.contentSnippet ?? ""}
-          ${item.content ?? ""}
-        `;
+        const combinedText = [
+          item.title,
+          item.contentSnippet,
+          item.content,
+        ]
+          .filter(Boolean)
+          .join(" ");
 
-        const category = detectCategory(combinedText);
-        const region = detectRegion(combinedText);
+        const { category, region } = categorizeArticle(
+          item.title ?? "",
+          `${item.contentSnippet ?? ""} ${item.content ?? ""}`,
+        );
 
         articles.push({
           title: item.title.trim(),
@@ -97,7 +134,10 @@ serve(async () => {
       if (articles.length > 0) {
         const { error } = await supabase
           .from("legal_news")
-          .upsert(articles, { onConflict: "url" });
+          .upsert(articles, {
+            onConflict: "url",
+            ignoreDuplicates: false,
+          });
 
         if (!error) {
           totalInserted += articles.length;
