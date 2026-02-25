@@ -38,6 +38,7 @@ const buildRegex = (keywords: string[]) =>
 
 
 const supremeCourtRegex = buildRegex([
+  "Supreme Court",
   "supreme court",
   "supreme court of india",
   "apex court",
@@ -51,17 +52,18 @@ const supremeCourtRegex = buildRegex([
 ]);
 
 const highCourtRegex = buildRegex([
+  "High Court",
   "high court",
   "division bench",
   "single judge bench",
 ]);
 
 const constitutionalRegex = buildRegex([
-  "article 14",
-  "article 19",
-  "article 21",
-  "article 32",
-  "article 226",
+  "Article 14",
+  "Article 19",
+  "Article 21",
+  "Article 32",
+  "Article 226",
   "constitutional bench",
 ]);
 
