@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       .select("*", { count: "exact" });
 
     if (category && category !== "All") {
-      query = query.eq("category", category);
+      query = query.ilike("category", category.trim());
     }
 
     if (region) {

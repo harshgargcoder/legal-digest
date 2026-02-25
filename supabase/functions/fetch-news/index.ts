@@ -2,7 +2,6 @@ import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import Parser from "npm:rss-parser@3.13.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  categorizeArticle,
   detectCategory,
   detectRegion,
 } from "../_shared/filter.ts";
@@ -108,11 +107,10 @@ serve(async () => {
           .filter(Boolean)
           .join(" ");
 
-        const { category, region } = categorizeArticle(
-          item.title ?? "",
-          `${item.contentSnippet ?? ""} ${item.content ?? ""}`,
-          feed.type,
-        );
+        const { category, region } = {
+          category: detectCategory(combinedText, feed.type),
+          region: detectRegion(combinedText),
+        };
 
         articles.push({
           title: item.title.trim(),
@@ -130,6 +128,7 @@ serve(async () => {
             ? new Date(item.pubDate).toISOString()
             : new Date().toISOString(),
         });
+        
       }
 
       if (articles.length > 0) {
