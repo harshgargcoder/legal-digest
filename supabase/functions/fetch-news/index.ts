@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import Parser from "npm:rss-parser@3.13.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  detectCategory,
+  detectCategories,
   detectRegion,
 } from "../_shared/filter.ts";
 
@@ -17,55 +17,24 @@ serve(async () => {
   );
 
   const allFeeds = [
-    // 🟣 INDIA / GENERAL
-    { url: "https://indianexpress.com/section/india/feed/", type: "general" },
-    {
-      url: "https://www.thehindu.com/news/national/feeder/default.rss",
-      type: "general",
-    },
-    {
-      url: "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms",
-      type: "general",
-    },
-
-    // 🌍 GLOBAL
-    { url: "https://feeds.bbci.co.uk/news/rss.xml", type: "global" },
-    { url: "https://feeds.bbci.co.uk/news/world/rss.xml", type: "global" },
-    { url: "https://www.aljazeera.com/xml/rss/all.xml", type: "global" },
-
-    // 💰 FINANCE
-    {
-      url:
-        "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms",
-      type: "finance",
-    },
-    { url: "https://www.moneycontrol.com/rss/latestnews.xml", type: "finance" },
-    { url: "https://feeds.bbci.co.uk/news/business/rss.xml", type: "finance" },
-
-    // 🏏 SPORTS
-    { url: "https://feeds.bbci.co.uk/sport/rss.xml", type: "sports" },
-    {
-      url: "https://timesofindia.indiatimes.com/rssfeeds/4719148.cms",
-      type: "sports",
-    },
-    {
-      url: "https://www.espncricinfo.com/rss/content/story/feeds/0.xml",
-      type: "sports",
-    },
-
-    // ⚖️ LEGAL
-    { url: "https://legalbites.in/feed/", type: "legal" },
-    { url: "https://abovethelaw.com/feed/", type: "legal" },
-    { url: "https://lawandcrime.com/feed/", type: "legal" },
-
-    // 🧾 CA / GST (Finance-Legal Hybrid)
-    { url: "https://news.google.com/rss/search?q=GST+India", type: "finance" },
-    {
-      url: "https://news.google.com/rss/search?q=Chartered+Accountant+India",
-      type: "finance",
-    },
-    { url: "https://news.google.com/rss/search?q=ICAI", type: "finance" },
-  ];
+  {url: "https://legalbites.in/feed/"},
+  {url: "https://news.google.com/rss/search?q=Supreme+Court+India&hl=en-IN&gl=IN&ceid=IN:en"},
+  {url: "https://news.google.com/rss/search?q=High+Court+India&hl=en-IN&gl=IN&ceid=IN:en"},
+  {url: "https://news.google.com/rss/search?q=Constitutional+Law+India&hl=en-IN&gl=IN&ceid=IN:en"},
+  {url: "https://news.google.com/rss/search?q=Constitution+Bench+India&hl=en-IN&gl=IN&ceid=IN:en"},
+  {url: "https://abovethelaw.com/feed/"},
+  {url: "https://lawandcrime.com/feed/"},
+  {url: "https://indianexpress.com/section/india/feed/"},
+  {url: "https://www.thehindu.com/news/national/feeder/default.rss"},
+  {url: "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms"},
+  {url: "https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms"},
+  {url: "https://www.moneycontrol.com/rss/latestnews.xml"},
+  {url: "https://feeds.bbci.co.uk/news/business/rss.xml"},
+  {url: "https://feeds.bbci.co.uk/sport/rss.xml"},
+  {url: "https://feeds.bbci.co.uk/news/rss.xml"},
+  {url: "https://feeds.bbci.co.uk/news/world/rss.xml"},
+  {url: "https://www.aljazeera.com/xml/rss/all.xml"},
+];
 
   let totalInserted = 0;
 
@@ -107,10 +76,8 @@ serve(async () => {
           .filter(Boolean)
           .join(" ");
 
-        const { category, region } = {
-          category: detectCategory(combinedText, feed.type),
-          region: detectRegion(combinedText),
-        };
+        const categories = detectCategories(combinedText, item.source?.type);
+        const region = detectRegion(combinedText);
 
         articles.push({
           title: item.title.trim(),
@@ -122,7 +89,7 @@ serve(async () => {
             item["media:thumbnail"]?.$?.url ||
             null,
           source,
-          category,
+          categories,
           region,
           published_at: item.pubDate
             ? new Date(item.pubDate).toISOString()
