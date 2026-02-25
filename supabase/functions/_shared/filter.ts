@@ -33,11 +33,11 @@ export interface ProcessedArticle {
   published_at: string;
 }
 
-const buildRegex = (keywords: string[]) =>
-  new RegExp(`\\b(${keywords.join("|")})\\b`, "i");
+// const buildRegex = (keywords: string[]) =>
+//   new RegExp(`\\b(${keywords.join("|")})\\b`, "i");
 
 
-const supremeCourtRegex = buildRegex([
+const supremeCourtRegex = ([
   "Supreme Court",
   "supreme court",
   "supreme court of india",
@@ -51,14 +51,14 @@ const supremeCourtRegex = buildRegex([
   "sc bench",
 ]);
 
-const highCourtRegex = buildRegex([
+const highCourtRegex = ([
   "High Court",
   "high court",
   "division bench",
   "single judge bench",
 ]);
 
-const constitutionalRegex = buildRegex([
+const constitutionalRegex = ([
   "Article 14",
   "Article 19",
   "Article 21",
@@ -67,7 +67,7 @@ const constitutionalRegex = buildRegex([
   "constitutional bench",
 ]);
 
-const legalRegex = buildRegex([
+const legalRegex = ([
   "tribunal",
   "nclt",
   "pil",
@@ -79,7 +79,7 @@ const legalRegex = buildRegex([
   "petition",
 ]);
 
-const indiaRegex = buildRegex([
+const indiaRegex = ([
   "india",
   "delhi",
   "mumbai",
@@ -92,10 +92,10 @@ export function detectCategory(
   text: string,
   sourceType?: string
 ): Category {
-  if (supremeCourtRegex.test(text)) return "Supreme Court";
-  if (highCourtRegex.test(text)) return "High Court";
-  if (constitutionalRegex.test(text)) return "Constitutional";
-  if (legalRegex.test(text)) return "Legal";
+  if (supremeCourtRegex.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase()))) return "Supreme Court";
+  if (highCourtRegex.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase()))) return "High Court";
+  if (constitutionalRegex.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase()))) return "Constitutional";
+  if (legalRegex.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase()))) return "Legal";
 
   if (sourceType === "finance") return "Finance";
   if (sourceType === "sports") return "Sports";
@@ -105,7 +105,7 @@ export function detectCategory(
 }
 
 export function detectRegion(text: string): "India" | "Global" {
-  return indiaRegex.test(text) ? "India" : "Global";
+  return indiaRegex.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase())) ? "India" : "Global";
 }
 
 export function processArticles(
