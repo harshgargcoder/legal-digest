@@ -111,6 +111,7 @@ serve(async () => {
         const { category, region } = categorizeArticle(
           item.title ?? "",
           `${item.contentSnippet ?? ""} ${item.content ?? ""}`,
+          feed.type,
         );
 
         articles.push({
