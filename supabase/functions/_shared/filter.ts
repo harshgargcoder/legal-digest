@@ -199,18 +199,24 @@ const indiaRegex = buildRegex([
 
 export function detectCategory(
   text: string,
-  sourceType: string,
+  sourceType: string
 ): ProcessedArticle["category"] {
   const lower = text.toLowerCase();
 
+  // 🏛 Courts ALWAYS highest priority
+  if (supremeCourtRegex.test(lower)) return "Supreme Court";
+  if (highCourtRegex.test(lower)) return "High Court";
+
+  // 📜 Constitutional
+  if (constitutionalRegex.test(lower)) return "Constitutional";
+
+  // ⚖ Legal
+  if (legalRegex.test(lower)) return "Legal";
+
+  // 🎯 Then feed shortcuts
   if (sourceType === "sports") return "Sports";
   if (sourceType === "finance") return "Finance";
   if (sourceType === "global") return "Global";
-
-  if (supremeCourtRegex.test(lower)) return "Supreme Court";
-  if (highCourtRegex.test(lower)) return "High Court";
-  if (constitutionalRegex.test(lower)) return "Constitutional";
-  if (legalRegex.test(lower)) return "Legal";
 
   return "General";
 }
