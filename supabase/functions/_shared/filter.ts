@@ -4,12 +4,10 @@ export interface RawArticle {
   content?: string;
   url: string;
   urlToImage?: string;
-
   source?: {
     name: string;
     type?: "general" | "legal" | "finance" | "sports" | "global";
   };
-
   publishedAt?: string;
 }
 
@@ -29,12 +27,14 @@ export interface ProcessedArticle {
     | "Sports"
     | "Global"
     | "General";
-  region: string;
+  region: "India" | "Global";
   published_at: string;
 }
 
 const buildRegex = (keywords: string[]) => {
-  const escaped = keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  const escaped = keywords.map((k) =>
+    k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+  );
   return new RegExp(`\\b(${escaped.join("|")})\\b`, "i");
 };
 
@@ -50,7 +50,10 @@ const rejectRegex = buildRegex([
   "red carpet",
 ]);
 
-export function isAllowed(title: string, description?: string): boolean {
+export function isAllowed(
+  title: string,
+  description?: string
+): boolean {
   const text = `${title} ${description ?? ""}`.toLowerCase();
   return !rejectRegex.test(text);
 }
@@ -68,18 +71,10 @@ const sportsRegex = buildRegex([
   "golf",
   "formula 1",
   "f1",
-  "boxing",
-  "wrestling",
   "world cup",
   "olympics",
   "ipl",
   "t20",
-  "champions league",
-  "premier league",
-  "grand slam",
-  "wimbledon",
-  "us open",
-  "french open",
 ]);
 
 const financeRegex = buildRegex([
@@ -92,33 +87,23 @@ const financeRegex = buildRegex([
   "nifty",
   "gdp",
   "inflation",
-  "interest rate",
   "repo rate",
   "currency",
   "forex",
   "rupee",
   "dollar",
-  "audit",
-  "chartered accountant",
-  "icai",
   "gst",
   "income tax",
-  "tds",
   "itr",
-  "balance sheet",
-  "financial statements",
-  "tax audit",
-  "capital gains",
-  "finance minister",
+  "icai",
   "economic survey",
-  "monetary policy",
   "fiscal policy",
-  "fdi",
+  "monetary policy",
 ]);
 
 const supremeCourtRegex = buildRegex([
-  "supreme court of india",
   "supreme court",
+  "supreme court of india",
   "chief justice of india",
   "cji",
   "sc verdict",
@@ -152,7 +137,6 @@ const constitutionalRegex = buildRegex([
 
 const legalRegex = buildRegex([
   "tribunal",
-  "national green tribunal",
   "nclt",
   "nclat",
   "pil",
@@ -171,16 +155,10 @@ const globalRegex = buildRegex([
   "israel",
   "gaza",
   "iran",
-  "north korea",
   "nato",
   "united nations",
-  "world health organization",
   "european union",
   "g20",
-  "climate summit",
-  "climate crisis",
-  "carbon emission",
-  "renewable energy",
 ]);
 
 const indiaRegex = buildRegex([
@@ -191,7 +169,6 @@ const indiaRegex = buildRegex([
   "chennai",
   "bengaluru",
   "hyderabad",
-  "supreme court of india",
   "rbi",
   "sebi",
   "parliament of india",
@@ -199,32 +176,41 @@ const indiaRegex = buildRegex([
 
 export function detectCategory(
   text: string,
-  sourceType: string,
+  sourceType: string
 ): ProcessedArticle["category"] {
   const lower = text.toLowerCase();
 
-  // Courts ALWAYS highest priority
-  if (supremeCourtRegex.test(lower)) return "Supreme Court";
-  if (highCourtRegex.test(lower)) return "High Court";
+  if (supremeCourtRegex.test(lower) || /\bsc\b/.test(lower))
+    return "Supreme Court";
 
-  if (constitutionalRegex.test(lower)) return "Constitutional";
-  if (legalRegex.test(lower)) return "Legal";
+  if (highCourtRegex.test(lower))
+    return "High Court";
+
+  if (constitutionalRegex.test(lower))
+    return "Constitutional";
+
+  if (legalRegex.test(lower))
+    return "Legal";
 
   if (sourceType === "sports") return "Sports";
   if (sourceType === "finance") return "Finance";
   if (sourceType === "global") return "Global";
+
   return "General";
 }
 
-export function detectRegion(text: string): string {
-  const lower = text.toLowerCase();
-  return indiaRegex.test(lower) ? "India" : "Global";
+export function detectRegion(
+  text: string
+): "India" | "Global" {
+  return indiaRegex.test(text.toLowerCase())
+    ? "India"
+    : "Global";
 }
 
 export function categorizeArticle(
   title: string,
   description: string,
-  sourceType: string,
+  sourceType: string
 ) {
   const combined = `${title} ${description}`;
 
@@ -235,11 +221,11 @@ export function categorizeArticle(
 }
 
 export function filterArticles(
-  articles: RawArticle[],
+  articles: RawArticle[]
 ): ProcessedArticle[] {
   return articles
     .filter((a) => a.title && a.url)
-    .filter((a) => isAllowed(a.title))
+    .filter((a) => isAllowed(a.title, a.description))
     .map((a) => {
       const combined = [
         a.title,
@@ -249,6 +235,11 @@ export function filterArticles(
         .filter(Boolean)
         .join(" ");
 
+      const category = detectCategory(
+        combined,
+        a.source?.type ?? "general"
+      );
+
       return {
         title: a.title,
         summary: a.description ?? "",
@@ -256,12 +247,10 @@ export function filterArticles(
         source: a.source?.name ?? "Unknown",
         url: a.url,
         image_url: a.urlToImage ?? null,
-        category: detectCategory(
-          combined,
-          a.source?.type ?? "general",
-        ),
+        category,
         region: detectRegion(combined),
-        published_at: a.publishedAt ?? new Date().toISOString(),
+        published_at:
+          a.publishedAt ?? new Date().toISOString(),
       };
     })
     .sort((a, b) => {
