@@ -227,6 +227,15 @@ export default function Navbar() {
             {/* Centered Links */}
             <div className="flex flex-col items-center gap-6 text-lg font-medium">
 
+              {user && (
+                <Link
+                  href="/bookmarks"
+                  className="hover:text-indigo-500 transition"
+                >
+                  Bookmarks
+                </Link>
+              )}
+
               <Link
                 href="/national"
                 className="hover:text-indigo-500 transition"
