@@ -1,11 +1,11 @@
 export type Category =
+  | "Constitutional"
   | "Supreme Court"
   | "High Court"
-  | "Constitutional"
   | "Finance"
   | "Sports"
-  | "Global"
-  | "General";
+  | "General"
+  | "Global";
 
 export interface RawArticle {
   title: string;
@@ -18,6 +18,7 @@ export interface RawArticle {
     type?: string;
   };
   publishedAt?: string;
+  feedCategory?: Category;
 }
 
 export interface ProcessedArticle {
@@ -83,7 +84,7 @@ const indiaLegalRegex = buildRegex([
 
 export function detectCategories(
   text: string,
-  sourceType?: string,
+  feedCategory?: Category,
 ): Category[] {
   const normalized = text.toLowerCase();
   const categorySet = new Set<Category>();
@@ -100,17 +101,45 @@ export function detectCategories(
     categorySet.add("High Court");
   }
 
-  if (sourceType === "finance") categorySet.add("Finance");
-  if (sourceType === "sports") categorySet.add("Sports");
-  if (sourceType === "global") categorySet.add("Global");
+  if (feedCategory) {
+    categorySet.add(feedCategory);
+  }
 
-  const categories = Array.from(categorySet);
+  if (
+    categorySet.has("Supreme Court") ||
+    categorySet.has("High Court") ||
+    categorySet.has("Constitutional")
+  ) {
+    categorySet.delete("General");
+  }
 
-  return categories.length ? categories : ["General"];
+  if (categorySet.size === 0) {
+    categorySet.add("General");
+  }
+
+  return Array.from(categorySet);
 }
 
-export function detectRegion(text: string): "India" | "Global" {
-  return indiaLegalRegex.test(text.toLowerCase()) ? "India" : "Global";
+export function detectRegion(
+  text: string,
+  feedCategory?: Category,
+): "India" | "Global" {
+  const normalized = text.toLowerCase();
+
+  if (feedCategory === "Global") {
+    return "Global";
+  }
+
+  if (
+    indiaLegalRegex.test(normalized) ||
+    normalized.includes("india") ||
+    normalized.includes("new delhi") ||
+    normalized.includes("mumbai") ||
+    normalized.includes("delhi")
+  ) {
+    return "India";
+  }
+  return "Global";
 }
 
 export function processArticles(
@@ -132,10 +161,14 @@ export function processArticles(
       source: a.source?.name ?? "Unknown",
       categories: detectCategories(
         combinedText,
-        a.source?.type,
+        a.feedCategory,
       ),
-      region: detectRegion(combinedText),
-      published_at: a.publishedAt ?? new Date().toISOString(),
+      region: detectRegion(
+        combinedText,
+        a.feedCategory,
+      ),
+      published_at:
+        a.publishedAt ?? new Date().toISOString(),
     };
   });
 }

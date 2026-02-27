@@ -5,6 +5,7 @@ interface Props {
   setCategory: React.Dispatch<React.SetStateAction<string>>;
 }
 
+// const categories = ["All", "Constitutional", "Supreme Court", "High Court"];
 const categories = ["All", "Constitutional", "Supreme Court", "High Court", "General", "Finance", "Sports", "Global"];
 
 export default function CategoryFilter({

@@ -12,7 +12,7 @@ export default function NationalPage() {
       <NewsFeed
         category="All"
         search=""
-        region="National"
+        region="India"
       />
     </div>
   );

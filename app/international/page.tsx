@@ -12,7 +12,7 @@ export default function InternationalPage() {
       <NewsFeed
         category="All"
         search=""
-        region="International"
+        region="Global"
       />
     </div>
   );
