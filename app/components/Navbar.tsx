@@ -107,6 +107,15 @@ export default function Navbar() {
           {/* Desktop Menu */}
           <div className="hidden sm:flex items-center gap-8">
 
+            {user && (
+              <Link
+                href="/bookmarks"
+                className="hover:text-indigo-600 transition font-medium"
+              >
+                Bookmarks
+              </Link>
+            )}
+
             <Link
               href="/national"
               className="hover:text-indigo-600 transition font-medium"
@@ -210,9 +219,8 @@ export default function Navbar() {
 
         {/* Mobile Dropdown */}
         <div
-          className={`sm:hidden overflow-hidden transition-all duration-300 ${
-            menuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-          }`}
+          className={`sm:hidden overflow-hidden transition-all duration-300 ${menuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+            }`}
         >
           <div className="px-6 py-8 bg-white dark:bg-[#0b1220] border-t border-gray-200 dark:border-gray-700">
 
