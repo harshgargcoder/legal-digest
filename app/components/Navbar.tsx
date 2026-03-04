@@ -92,7 +92,7 @@ export default function Navbar() {
     <>
       <nav className="w-full sticky top-0 z-[100] backdrop-blur-md bg-white/80 dark:bg-[#0b1220]/80 border-b border-gray-200 dark:border-gray-800 transition-all">
 
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
 
           {/* Logo */}
           <Image
