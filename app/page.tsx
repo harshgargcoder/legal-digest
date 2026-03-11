@@ -14,7 +14,7 @@ export default function Home() {
   const [category, setCategory] = useState("All");
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 min-h-screen bg-gray-50 dark:bg-[#0f172a]">
+    <div className="max-w-6xl mx-auto px-4 pt-32 pb-8 min-h-screen bg-gray-50 dark:bg-[#0f172a]">
 
       {/* CATEGORY FILTER */}
       <CategoryFilter

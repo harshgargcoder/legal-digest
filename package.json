@@ -12,11 +12,14 @@
     "@google/generative-ai": "^0.24.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.94.1",
+    "d3-force": "^3.0.0",
+    "firebase": "^12.10.0",
     "framer-motion": "^12.33.0",
     "lucide-react": "^0.564.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-force-graph-2d": "^1.29.1",
     "react-markdown": "^10.1.0",
     "rss-parser": "^3.13.0"
   },
@@ -27,7 +30,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "supabase": "^2.76.8",
+    "supabase": "^2.78.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

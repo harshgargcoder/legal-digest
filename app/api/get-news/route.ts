@@ -66,7 +66,9 @@ export async function GET(request: Request) {
       );
     }
 
-    query = query.order("published_at", { ascending: false });
+    query = query
+      .order("published_at", { ascending: false })
+      .order("id", { ascending: false });
 
     const { data, error, count } = await query.range(from, to);
 

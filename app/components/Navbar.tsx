@@ -5,8 +5,10 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import AuthModal from "./auth/AuthModal";
-import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useSearch } from "@/app/context/SearchContext";
+import { User, LogOut, LayoutDashboard, Bookmark as BookmarkIcon, ChevronDown, Users, Bell, Network } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
@@ -16,24 +18,37 @@ export default function Navbar() {
   const [authOpen, setAuthOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    setNotificationsEnabled(localStorage.getItem("notifications") === "true");
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const [results, setResults] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const desktopSearchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -69,11 +84,18 @@ export default function Navbar() {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
+        (desktopSearchRef.current && !desktopSearchRef.current.contains(target)) &&
+        (mobileSearchRef.current && !mobileSearchRef.current.contains(target))
       ) {
         setResults([]);
+      }
+      if (userDropdownRef.current && !userDropdownRef.current.contains(target)) {
+        setUserDropdownOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(target)) {
+        setNotificationOpen(false);
       }
     };
 
@@ -83,68 +105,131 @@ export default function Navbar() {
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
     router.push("/");
     router.refresh();
   };
 
+  const toggleNotifications = async () => {
+    if (!notificationsEnabled) {
+      if (typeof window !== "undefined" && "Notification" in window) {
+        if (Notification.permission === "granted") {
+          setNotificationsEnabled(true);
+          localStorage.setItem("notifications", "true");
+        } else {
+          try {
+            const permission = await Notification.requestPermission();
+            if (permission === "granted") {
+              setNotificationsEnabled(true);
+              localStorage.setItem("notifications", "true");
+            } else {
+              setNotificationsEnabled(false);
+              localStorage.setItem("notifications", "false");
+            }
+          } catch (e) {
+            setNotificationsEnabled(false);
+            localStorage.setItem("notifications", "false");
+          }
+        }
+      } else {
+        setNotificationsEnabled(true);
+        localStorage.setItem("notifications", "true");
+      }
+    } else {
+      setNotificationsEnabled(false);
+      localStorage.setItem("notifications", "false");
+    }
+  };
+
   return (
     <>
-      <nav className="w-full sticky top-0 z-[100] backdrop-blur-md bg-white/80 dark:bg-[#0b1220]/80 border-b border-gray-200 dark:border-gray-800 transition-all">
-
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-
+      <div className="fixed top-0 w-full z-[1000] px-4 pt-4 sm:pt-6 flex justify-center pointer-events-none">
+        <nav 
+          className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl border border-gray-200/40 bg-white/40 dark:bg-[#0B1221]/40
+            ${scrolled 
+              ? "w-full max-w-4xl py-2 px-5 rounded-full" 
+              : "w-full max-w-7xl py-3 px-6 rounded-3xl"}
+          `}
+        >
           {/* Logo */}
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            width={140}
-            height={35}
-            className="cursor-pointer w-[120px] sm:w-[140px]"
-            onClick={() => router.push("/")}
-          />
+          <div className="flex-shrink-0 flex items-center">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={scrolled ? 110 : 140}
+              height={scrolled ? 28 : 35}
+              className="cursor-pointer transition-all duration-300"
+              style={{ filter: "brightness(0.1)" }}
+              onClick={() => router.push("/")}
+            />
+          </div>
 
-          {/* Desktop Menu */}
-          <div className="hidden sm:flex items-center gap-8">
+          {/* Desktop Search & Actions */}
+          <div className="hidden lg:flex items-center gap-6 flex-1 justify-end">
+            
+            <Link href="/graph" className="text-sm font-medium text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 transition flex items-center gap-2">
+              <Network size={16} /> Topology
+            </Link>
 
-            {user && (
-              <Link
-                href="/bookmarks"
-                className="hover:text-indigo-600 transition font-medium"
+            <Link href="/community" className="text-sm font-medium text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 transition flex items-center gap-2">
+              <Users size={16} /> Community
+            </Link>
+
+            {/* Notifications */}
+            <div className="relative" ref={notificationRef}>
+              <button 
+                onClick={() => setNotificationOpen(!notificationOpen)}
+                className="p-2.5 rounded-full border border-gray-200/70 dark:border-white/10 bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-white/10 transition-all duration-300 shadow-sm relative group"
               >
-                Bookmarks
-              </Link>
-            )}
+                <Bell size={18} className="text-gray-600 dark:text-gray-300 group-hover:text-indigo-600 transition-colors" />
+                {notificationsEnabled && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-[#0B1221] animate-pulse"></span>}
+              </button>
 
-            <Link
-              href="/national"
-              className="hover:text-indigo-600 transition font-medium"
-            >
-              National
-            </Link>
-
-            <Link
-              href="/international"
-              className="hover:text-indigo-600 transition font-medium"
-            >
-              International
-            </Link>
+              {notificationOpen && (
+                <div className="absolute top-[calc(100%+12px)] right-0 w-72 bg-white dark:bg-[#0B1221] border border-gray-100 dark:border-white/10 rounded-2xl shadow-xl z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Notifications</p>
+                  </div>
+                  <div className="p-5 flex flex-col items-center text-center space-y-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${notificationsEnabled ? 'bg-indigo-50 border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-500/20' : 'bg-gray-50 border-gray-100 dark:bg-white/5 dark:border-white/10'}`}>
+                      <Bell size={24} className={notificationsEnabled ? 'text-indigo-500' : 'text-gray-400'} />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">Stay Updated</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                        Get real-time intelligence alerts for major legal rulings and community insights.
+                      </p>
+                    </div>
+                    <button 
+                      onClick={toggleNotifications}
+                      className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                        notificationsEnabled 
+                          ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400' 
+                          : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20'
+                      }`}
+                    >
+                      {notificationsEnabled ? "Disable Alerts" : "Enable Alerts"}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Search */}
-            <div className="relative w-56" ref={dropdownRef}>
+            <div className="relative w-56" ref={desktopSearchRef}>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search..."
-                className="w-full bg-gray-100 dark:bg-black/40 border rounded-lg pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-400"
+                placeholder="Search cases..."
+                className="w-full bg-gray-100/80 border border-gray-200/50 rounded-full pl-9 pr-4 py-1.5 text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
               />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
                 🔎
               </span>
 
               {search.trim() !== "" && (
-                <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-[#111827] border rounded-lg shadow-xl z-[200] max-h-80 overflow-y-auto">
+                <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-gray-200 rounded-2xl shadow-xl z-[1100] max-h-80 overflow-y-auto">
                   {loading && (
                     <div className="p-3 text-sm text-gray-500">
                       Searching...
@@ -159,7 +244,7 @@ export default function Navbar() {
                           setSearch("");
                           setResults([]);
                         }}
-                        className="p-3 text-sm cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800"
+                        className="p-3 text-sm cursor-pointer hover:bg-gray-50 text-gray-800"
                       >
                         <p className="font-medium">{item.title}</p>
                         <p className="text-xs text-gray-500">
@@ -172,35 +257,71 @@ export default function Navbar() {
             </div>
 
             {user ? (
-              <button
-                onClick={handleLogout}
-                className="text-red-500 font-medium"
-              >
-                Logout
-              </button>
+              <div className="relative" ref={userDropdownRef}>
+                <button
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="group flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full border border-gray-200/70 dark:border-white/10 bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-white/10 transition-all duration-300 shadow-sm"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-inner font-bold text-sm flex-shrink-0">
+                    {user.displayName ? user.displayName[0].toUpperCase() : (user.email ? user.email[0].toUpperCase() : "?")}
+                  </div>
+                  <span className="max-w-0 overflow-hidden text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:max-w-[120px] transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] whitespace-nowrap">
+                    {user.displayName || user.email?.split('@')[0]}
+                  </span>
+                  <ChevronDown size={14} className="text-gray-500 dark:text-gray-400 group-hover:text-indigo-500 transition-colors" />
+                </button>
+
+                {userDropdownOpen && (
+                  <div className="absolute top-[calc(100%+8px)] right-0 w-56 bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{user.displayName || user.email}</p>
+                      <p className="text-xs text-indigo-600 font-medium">{user.photoURL || "Law Student / Explorer"}</p>
+                    </div>
+                    <div className="p-2 space-y-1">
+                      <Link href="/profile" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
+                        <User size={16} className="text-indigo-500" /> My Profile
+                      </Link>
+                      <Link href="/dashboard" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
+                        <LayoutDashboard size={16} className="text-indigo-500" /> Dashboard
+                      </Link>
+                      <Link href="/bookmarks" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
+                        <BookmarkIcon size={16} className="text-indigo-500" /> My Saved Cases
+                      </Link>
+                    </div>
+                    <div className="p-2 border-t border-gray-100">
+                      <button
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition"
+                      >
+                        <LogOut size={16} /> Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <button
                 onClick={() => setAuthOpen(true)}
-                className="px-4 py-1.5 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium"
+                className="px-5 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/25 transition-all font-medium text-sm flex items-center gap-2"
               >
-                Login
+                <User size={16} /> Researcher Login
               </button>
             )}
           </div>
 
           {/* Mobile Top Section */}
-          <div className="flex items-center gap-3 sm:hidden">
+          <div className="flex items-center gap-3 lg:hidden">
 
             {/* Search */}
-            <div className="relative w-32" ref={dropdownRef}>
+            <div className="relative w-32" ref={mobileSearchRef}>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search..."
-                className="w-full bg-gray-100 dark:bg-black/40 border rounded-lg pl-8 pr-2 py-1.5 text-sm"
+                className="w-full bg-gray-100 border border-gray-200 rounded-full pl-8 pr-2 py-1.5 text-sm text-gray-800"
               />
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm">
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm opacity-70">
                 🔎
               </span>
             </div>
@@ -210,71 +331,73 @@ export default function Navbar() {
               onClick={() => setMenuOpen(!menuOpen)}
               className="relative w-6 h-6 flex flex-col justify-between"
             >
-              <span className={`h-0.5 w-full bg-black dark:bg-white transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-2.5" : ""}`} />
-              <span className={`h-0.5 w-full bg-black dark:bg-white transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
-              <span className={`h-0.5 w-full bg-black dark:bg-white transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-2.5" : ""}`} />
+              <span className={`h-0.5 w-full bg-gray-800 transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-2.5" : ""}`} />
+              <span className={`h-0.5 w-full bg-gray-800 transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
+              <span className={`h-0.5 w-full bg-gray-800 transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-2.5" : ""}`} />
             </button>
           </div>
-        </div>
-
+        </nav>
+        
         {/* Mobile Dropdown */}
         <div
-          className={`sm:hidden overflow-hidden transition-all duration-300 ${menuOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-            }`}
+          className={`absolute top-[calc(100%+8px)] w-[calc(100%-2rem)] max-w-md bg-white border border-gray-100 shadow-2xl rounded-3xl overflow-hidden pointer-events-auto transition-all duration-300 z-[1100] ${menuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}
         >
-          <div className="px-6 py-8 bg-white dark:bg-[#0b1220] border-t border-gray-200 dark:border-gray-700">
-
-            {/* Centered Links */}
-            <div className="flex flex-col items-center gap-6 text-lg font-medium">
-
+          <div className="py-2">
+            <div className="flex flex-col items-start gap-2 text-base font-medium px-4 pt-4">
               {user && (
-                <Link
-                  href="/bookmarks"
-                  className="hover:text-indigo-500 transition"
-                >
-                  Bookmarks
-                </Link>
+                <>
+                  <div className="px-4 py-3 mb-2 w-full bg-gray-50 rounded-xl border border-gray-100">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{user.displayName || user.email}</p>
+                    <p className="text-xs text-indigo-600 font-medium">{user.photoURL || "Law Student / Explorer"}</p>
+                  </div>
+
+                  <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
+                    <User size={18} className="text-indigo-500" /> My Profile
+                  </Link>
+                  <Link href="/graph" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
+                    <Network size={18} className="text-indigo-500" /> Case Topology
+                  </Link>
+                  <Link href="/community" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
+                    <Users size={18} className="text-indigo-500" /> Community Blog
+                  </Link>
+                  <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
+                    <LayoutDashboard size={18} className="text-indigo-500" /> Dashboard
+                  </Link>
+                  <Link href="/bookmarks" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
+                    <BookmarkIcon size={18} className="text-indigo-500" /> Saved Cases
+                  </Link>
+                  <button onClick={toggleNotifications} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
+                    <Bell size={18} className="text-indigo-500" /> 
+                    <span className="flex-1 text-left">Push Notifications</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${notificationsEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
+                      {notificationsEnabled ? 'ON' : 'OFF'}
+                    </span>
+                  </button>
+                </>
               )}
-
-              <Link
-                href="/national"
-                className="hover:text-indigo-500 transition"
-              >
-                National
-              </Link>
-
-              <Link
-                href="/international"
-                className="hover:text-indigo-500 transition"
-              >
-                International
-              </Link>
-
             </div>
 
             {/* Auth Section */}
-            <div className="mt-10 flex justify-center">
-
+            <div className="mt-6 mb-4 px-4 flex justify-center">
               {user ? (
                 <button
                   onClick={handleLogout}
-                  className="px-8 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 transition font-medium"
+                  className="w-full px-8 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition font-medium flex justify-center items-center gap-2"
                 >
-                  Logout
+                  <LogOut size={18} /> Logout
                 </button>
               ) : (
                 <button
-                  onClick={() => setAuthOpen(true)}
-                  className="px-8 py-2 rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition font-medium shadow-md"
+                  onClick={() => { setAuthOpen(true); setMenuOpen(false); }}
+                  className="w-full px-8 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 transition font-medium shadow-md flex justify-center items-center gap-2"
                 >
-                  Login
+                  <User size={18} /> Researcher Login
                 </button>
               )}
-
             </div>
           </div>
         </div>
-      </nav>
+      </div>
 
       <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
     </>

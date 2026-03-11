@@ -1,6 +1,7 @@
 import Image from "next/image";
-import { useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
+import { auth, googleProvider } from "@/lib/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 
 type Props = {
   isOpen: boolean;
@@ -12,8 +13,13 @@ export default function AuthModal({ isOpen, onClose }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!isOpen || !mounted) return null;
 
   const validate = () => {
     if (!email || !password) {
@@ -42,15 +48,11 @@ export default function AuthModal({ isOpen, onClose }: Props) {
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
       onClose();
+    } catch (err: any) {
+      setError(err.message);
     }
 
     setLoading(false);
@@ -66,30 +68,34 @@ export default function AuthModal({ isOpen, onClose }: Props) {
     setLoading(true);
     setError("");
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      setError("Check your email for confirmation.");
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      setError("Account created successfully. You are now logged in.");
+      onClose();
+    } catch (err: any) {
+      setError(err.message);
     }
 
     setLoading(false);
   };
 
   return (
-    <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-[#020617]/80 backdrop-blur-lg flex items-center justify-center z-[200] p-4 animate-in fade-in duration-300">
 
-      <div className="w-[380px] 
-                bg-white dark:bg-zinc-900
-                border border-gray-200 dark:border-zinc-700
+      <div className="w-full max-w-[420px] 
+                bg-white/5 dark:bg-[#0b1220]/90
+                border border-white/20 dark:border-indigo-500/20
                 rounded-3xl 
-                p-8 
-                shadow-2xl 
-                transition-all duration-300">
+                p-8 sm:p-10
+                shadow-[0_0_40px_-10px_rgba(99,102,241,0.2)] 
+                backdrop-blur-xl
+                relative overflow-hidden
+                transform transition-all
+                animate-in zoom-in-95 duration-300">
+        
+        {/* Decorative Glow */}
+        <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
@@ -110,39 +116,45 @@ export default function AuthModal({ isOpen, onClose }: Props) {
             className="block dark:hidden bg-white/60 rounded-md p-1"
            
           />
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-500 text-center tracking-wide">
-            Clarity in Law. Insight for the World.
+          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 text-center tracking-wide font-medium">
+            Access the Legal Terminal
           </p>
         </div>
 
 
         {/* Email */}
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full border border-gray-300 dark:border-zinc-700 
-                   bg-white dark:bg-zinc-800 
-                   px-3 py-2 mb-4 rounded-xl 
-                   outline-none 
-                   focus:ring-2 focus:ring-black dark:focus:ring-white 
-                   transition"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+        <div className="relative mb-4">
+          <input
+            type="email"
+            placeholder="Researcher Email"
+            className="w-full border border-gray-300 dark:border-white/10 
+                     bg-white/50 dark:bg-black/20 
+                     px-4 py-3 rounded-xl 
+                     text-sm dark:text-white
+                     outline-none 
+                     focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 
+                     transition-all shadow-inner"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
 
         {/* Password */}
-        <input
-          type="password"
-          placeholder="Password"
-          className="w-full border border-gray-300 dark:border-zinc-700 
-                   bg-white dark:bg-zinc-800 
-                   px-3 py-2 mb-3 rounded-xl 
-                   outline-none 
-                   focus:ring-2 focus:ring-black dark:focus:ring-white 
-                   transition"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <div className="relative mb-5">
+          <input
+            type="password"
+            placeholder="Security Key"
+            className="w-full border border-gray-300 dark:border-white/10 
+                     bg-white/50 dark:bg-black/20 
+                     px-4 py-3 rounded-xl 
+                     text-sm dark:text-white
+                     outline-none 
+                     focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 
+                     transition-all shadow-inner"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
 
         {/* Error */}
         {error && (
@@ -156,41 +168,54 @@ export default function AuthModal({ isOpen, onClose }: Props) {
           onClick={handleLogin}
           disabled={loading}
           className="w-full 
-                   bg-black dark:bg-white 
-                   text-white dark:text-black 
-                   py-2.5 rounded-xl mb-4 
-                   font-medium
+                   bg-gradient-to-r from-indigo-600 to-purple-600 
+                   text-white 
+                   py-3 rounded-xl mb-3 
+                   font-semibold text-sm
+                   shadow-[0_4px_14px_0_rgba(99,102,241,0.39)]
                    transition-all duration-200 
-                   hover:shadow-lg hover:scale-[1.02] 
-                   active:scale-[0.97] 
-                   cursor-pointer disabled:opacity-60"
+                   hover:shadow-[0_6px_20px_rgba(99,102,241,0.23)] hover:scale-[1.01] 
+                   active:scale-[0.98] 
+                   cursor-pointer disabled:opacity-60 relative overflow-hidden"
         >
-          {loading ? "Processing..." : "Login"}
+          {loading ? "Authenticating..." : "Authorize Access"}
+        </button>
+
+        <button
+          onClick={handleSignup}
+          disabled={loading}
+          className="w-full text-center text-xs text-indigo-500 hover:text-indigo-400 font-medium transition mb-5"
+        >
+          Don't have clearance? Request Account
         </button>
 
         {/* Divider */}
-        <div className="flex items-center my-4">
-          <div className="flex-grow h-px bg-gray-300 dark:bg-zinc-700"></div>
-          <span className="px-3 text-xs text-gray-500">OR</span>
-          <div className="flex-grow h-px bg-gray-300 dark:bg-zinc-700"></div>
+        <div className="flex items-center my-5">
+          <div className="flex-grow h-px bg-gray-200 dark:bg-white/10"></div>
+          <span className="px-4 text-[11px] uppercase tracking-wider text-gray-400">Secure SSO</span>
+          <div className="flex-grow h-px bg-gray-200 dark:bg-white/10"></div>
         </div>
 
         {/* Google Button */}
         <button
           onClick={async () => {
-            await supabase.auth.signInWithOAuth({
-              provider: "google",
-              options: { redirectTo: window.location.origin },
-            });
+            try {
+              await signInWithPopup(auth, googleProvider);
+              onClose();
+            } catch (err: any) {
+              setError(err.message);
+            }
           }}
           className="w-full flex items-center justify-center gap-3
-                   border border-gray-300 dark:border-zinc-600
-                   py-2.5 rounded-xl
-                   font-medium
+                   border border-gray-200 dark:border-white/10
+                   bg-white/50 dark:bg-black/20
+                   py-3 rounded-xl
+                   text-sm font-medium text-gray-700 dark:text-gray-300
                    transition-all duration-200
-                   hover:bg-gray-100 dark:hover:bg-zinc-800
+                   hover:bg-gray-50 dark:hover:bg-white/5
+                   hover:border-gray-300 dark:hover:border-white/20
                    hover:shadow-md
-                   active:scale-[0.97]
+                   active:scale-[0.98]
                    cursor-pointer"
         >
           <Image

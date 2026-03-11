@@ -2,29 +2,37 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function BookmarkButton({ postId }: { postId: string }) {
   const [user, setUser] = useState<any>(null);
   const [bookmarked, setBookmarked] = useState(false);
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      setUser(data.user);
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
 
-      if (data.user) {
-        const { data: existing } = await supabase
-          .from("bookmarks")
-          .select("id")
-          .eq("post_id", postId)
-          .eq("user_id", data.user.id)
-          .single();
-
-        if (existing) setBookmarked(true);
+      if (currentUser) {
+        try {
+          const res = await fetch("/api/bookmarks", {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ userId: currentUser.uid, postId }),
+          });
+          const data = await res.json();
+          setBookmarked(data.isBookmarked);
+        } catch (error) {
+          console.error("Error checking bookmark status", error);
+        }
+      } else {
+        setBookmarked(false);
       }
-    };
+    });
 
-    checkUser();
+    return () => unsubscribe();
   }, [postId]);
 
   const toggleBookmark = async () => {
@@ -33,38 +41,45 @@ export default function BookmarkButton({ postId }: { postId: string }) {
       return;
     }
 
-    if (bookmarked) {
-      // DELETE
-      await supabase
-        .from("bookmarks")
-        .delete()
-        .eq("post_id", postId)
-        .eq("user_id", user.id);
-
-      setBookmarked(false);
-    } else {
-      // INSERT
-      await supabase.from("bookmarks").insert([
-        {
-          user_id: user.id,
-          post_id: postId,
-        },
-      ]);
-
-      setBookmarked(true);
+    try {
+        if (bookmarked) {
+          // DELETE
+          await fetch("/api/bookmarks", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ userId: user.uid, postId, action: "remove" }),
+          });
+    
+          setBookmarked(false);
+        } else {
+          // INSERT
+          await fetch("/api/bookmarks", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ userId: user.uid, postId, action: "add" }),
+          });
+    
+          setBookmarked(true);
+        }
+    } catch (error) {
+        console.error("Error toggling bookmark", error);
     }
   };
 
   return (
-  <button
-    onClick={toggleBookmark}
-    className="flex items-center gap-2 text-sm transition"
-  >
-    {bookmarked ? (
-      <span className="text-red-500 cursor-pointer">❤️</span>
-    ) : (
-      <span className="text-gray-400 cursor-pointer">🤍</span>
-    )}
-  </button>
-);
+    <button
+      onClick={toggleBookmark}
+      className="flex items-center gap-2 text-sm transition"
+    >
+      {bookmarked ? (
+        <span className="text-red-500 cursor-pointer">❤️</span>
+      ) : (
+        <span className="text-gray-400 cursor-pointer">🤍</span>
+      )}
+    </button>
+  );
 }

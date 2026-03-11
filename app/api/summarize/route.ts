@@ -70,7 +70,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
-        const { title, description } = await req.json();
+        const { id, title, description } = await req.json();
 
         if (!process.env.GEMINI_API_KEY) {
             throw new Error("Missing GEMINI_API_KEY");
@@ -81,6 +81,10 @@ export async function POST(req: NextRequest) {
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
         });
+
+        // Ensure we don't send purely empty/null strings to the AI, or it talks about missing content.
+        const safeTitle = title || "Untitled";
+        const safeDesc = description || "No detailed description provided. Assume this is a breaking news headline or live event.";
 
         const prompt = `
         Analyze this legal news article and extract structured information.
@@ -101,8 +105,8 @@ export async function POST(req: NextRequest) {
 
         Tags: tag1, tag2, tag3
 
-        Title: ${title}
-        Content: ${description}
+        Title: ${safeTitle}
+        Content: ${safeDesc}
         `;
 
         const result = await model.generateContent(prompt);
@@ -156,6 +160,19 @@ export async function POST(req: NextRequest) {
 
             summary += line + "\n";
         }
+
+        // Cache the result into the database for the Case Linkage Graph
+        if (id) {
+            await supabase
+              .from("legal_news")
+              .update({
+                  ai_summary: summary,
+                  tags: tags,
+                  precedents: precedents
+              })
+              .eq("id", id);
+        }
+
         return NextResponse.json({
             summary,
             tags,

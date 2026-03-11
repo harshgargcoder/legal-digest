@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import NewsCard from "./NewsCard";
+import { ArrowUpRight } from "lucide-react";
 
 interface Props {
   category: string;
@@ -35,14 +36,15 @@ export default function NewsFeed({ category, search, region }: Props) {
     }
 
     const res = await fetch(url);
-
-
     const data = await res.json();
     const newArticles = data.articles || [];
 
-    setArticles((prev) =>
-      reset ? newArticles : [...prev, ...newArticles]
-    );
+    setArticles((prev) => {
+      if (reset) return newArticles;
+      const seen = new Set(prev.map((a: any) => a.id));
+      const uniqueNew = newArticles.filter((a: any) => !seen.has(a.id));
+      return [...prev, ...uniqueNew];
+    });
 
     setHasMore(newArticles.length === 10);
     setLoading(false);
@@ -70,49 +72,53 @@ export default function NewsFeed({ category, search, region }: Props) {
   return (
     <>
       {articles.length > 0 && (
-        <div
-          className="
-          mb-10 p-6 sm:p-8 rounded-2xl transition-all duration-500
-
-          /* Light Mode */
-          bg-white border border-gray-200 shadow-md
-
-          /* Dark Mode */
-          dark:bg-gradient-to-br
-        dark:from-indigo-900/60
-        dark:to-purple-900/60
-        dark:border-indigo-500/30
-          dark:shadow-lg
-          dark:backdrop-blur-xl
-          hover:shadow-xl
-        "
+        <a 
+          href={articles[0].url} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="block mb-10 group"
         >
-          <span className="text-xs px-3 py-1 rounded-full font-medium bg-indigo-600 text-white">
-            🔥 Breaking Intelligence
-          </span>
-
-          <h2 className="text-xl sm:text-2xl font-bold mt-4 text-gray-900 dark:text-white leading-snug">
-            {articles[0].title}
-          </h2>
-
-          <p className="mt-3 text-sm sm:text-base text-gray-600 dark:text-gray-300 leading-relaxed">
-            {articles[0].summary}
-          </p>
-
-          <a
-            href={articles[0].url}
-            target="_blank"
-            rel="noopener noreferrer"
+          <div
             className="
-            inline-block mt-5 font-medium transition
-
-            text-indigo-600 hover:text-indigo-800
-            dark:text-indigo-300 dark:hover:text-white
+            relative overflow-hidden p-8 sm:p-10 rounded-3xl transition-all duration-500
+            bg-[#0B1221] border border-indigo-500/20 shadow-2xl
+            dark:bg-gradient-to-br dark:from-[#0B1221] dark:to-[#111827]
+            hover:border-indigo-500/40 hover:shadow-indigo-500/10
           "
           >
-            Read Full →
-          </a>
-        </div>
+            {/* Background Map / Glow Decoration */}
+            <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-indigo-500/10 to-transparent opacity-50 pointer-events-none mix-blend-screen"></div>
+            <div className="absolute -top-32 -right-32 w-64 h-64 bg-indigo-600 rounded-full blur-[100px] opacity-20 pointer-events-none group-hover:bg-purple-600 transition-colors duration-1000"></div>
+
+            <div className="relative z-10 flex flex-col h-full justify-between">
+              <div>
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 mb-6 backdrop-blur-md">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                  Top Story
+                </span>
+
+                <h2 className="text-2xl sm:text-4xl font-bold mt-2 text-white leading-tight group-hover:text-indigo-200 transition-colors duration-300">
+                  {articles[0].title}
+                </h2>
+
+                <p className="mt-5 text-base sm:text-lg text-gray-300 leading-relaxed max-w-2xl">
+                  {articles[0].summary}
+                </p>
+              </div>
+
+              <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
+                <div className="flex items-center gap-4 text-xs font-medium text-gray-400">
+                  <span className="px-3 py-1 bg-white/5 rounded-lg border border-white/10 text-indigo-300">{articles[0].category}</span>
+                  <span>{new Date(articles[0].published_at).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" })}</span>
+                </div>
+                
+                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-500 transition-colors duration-300 text-white">
+                  <ArrowUpRight size={18} className="group-hover:rotate-12 transition-transform duration-300" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </a>
       )}
 
       <div className="grid gap-6 sm:gap-8">
@@ -127,27 +133,23 @@ export default function NewsFeed({ category, search, region }: Props) {
       </div>
 
       {hasMore && (
-        <div className="flex justify-center mt-12">
+        <div className="flex justify-center mt-12 pb-12">
           <button
             onClick={handleLoadMore}
             disabled={loading}
             className="
-            px-6 py-3 rounded-xl font-medium transition-all duration-300
-
-            /* Light */
-            bg-indigo-600 text-white hover:bg-indigo-700 shadow-md
-
-            /* Dark */
-            dark:bg-indigo-500 dark:hover:bg-indigo-600
-
-            disabled:opacity-50 disabled:cursor-not-allowed
+            px-8 py-3.5 rounded-full font-semibold transition-all duration-300 text-sm tracking-wide
+            bg-[#111827] text-white border border-white/10 hover:border-white/20 hover:bg-[#1f2937]
+            disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3
           "
           >
-            {loading ? "Loading..." : "Load More"}
+            {loading && (
+              <span className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></span>
+             )}
+            {loading ? "Decrypting Feed..." : "Load Older Archives"}
           </button>
         </div>
       )}
     </>
   );
-
 }

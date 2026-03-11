@@ -1,37 +1,18 @@
 "use client";
 
 import { useState } from "react";
-
-interface FormData {
-  name: string;
-  email: string;
-  message: string;
-}
+import { MessageSquare, Send, CheckCircle2, AlertCircle } from "lucide-react";
 
 export default function FeedbackPage() {
-  const [formData, setFormData] = useState<FormData>({
-    name: "",
-    email: "",
-    message: "",
-  });
-
+  const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [loading, setLoading] = useState(false);
-  const [status, setStatus] = useState<
-    "idle" | "success" | "error"
-  >("idle");
+  const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setStatus("idle");
@@ -39,107 +20,113 @@ export default function FeedbackPage() {
     try {
       const response = await fetch("/api/feedback", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed");
-      }
+      if (!response.ok) throw new Error("Failed");
 
       setStatus("success");
-      setFormData({
-        name: "",
-        email: "",
-        message: "",
-      });
-    } catch (error) {
+      setFormData({ name: "", email: "", message: "" });
+    } catch {
       setStatus("error");
     }
-
     setLoading(false);
   };
 
   return (
-    <div className="bg-white min-h-screen">
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-50 via-white to-white"></div>
-
-        <div className="relative z-10 max-w-3xl mx-auto px-6 pt-10 pb-5 text-center">
-          <h1 className="text-4xl md:text-5xl font-semibold text-[#2f4a63]">
-            Feedback
-          </h1>
-
-          <p className="mt-3 text-lg text-gray-600 max-w-xl mx-auto">
-            Your suggestions help us improve Legal Digest.
-          </p>
+    <div className="bg-[#030712] min-h-screen pt-32 pb-20 px-6">
+      <div className="max-w-3xl mx-auto">
+        
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center p-4 bg-indigo-500/10 rounded-full mb-6 ring-1 ring-indigo-500/30">
+            <MessageSquare size={32} className="text-indigo-400" />
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Transmit Feedback</h1>
+          <p className="text-gray-400 text-lg">Your structural insights dictate our platform's evolution.</p>
         </div>
-      </section>
 
-      <section className="max-w-3xl mx-auto px-6 py-10">
-        <div className="bg-gray-50 p-10 rounded-3xl shadow-sm border border-gray-100">
-          <form className="space-y-8" onSubmit={handleSubmit}>
+        {/* Form Container */}
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden">
+          {/* Subtle Glow inside form */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[80px] rounded-full pointer-events-none"></div>
 
-            {/* Name */}
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Your Name"
-              required
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2f4a63]/30 transition"
-            />
+          <form className="space-y-6 relative z-10" onSubmit={handleSubmit}>
+            <div className="grid sm:grid-cols-2 gap-6">
+              {/* Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Researcher Name</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  placeholder="E.g. Harish Salve"
+                  required
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-gray-500 hover:bg-white/10 hover:border-indigo-400/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300"
+                />
+              </div>
 
-            {/* Email */}
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Email Address"
-              required
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2f4a63]/30 transition"
-            />
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Secure Email Address</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="contact@chambers.in"
+                  required
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-gray-500 hover:bg-white/10 hover:border-indigo-400/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300"
+                />
+              </div>
+            </div>
 
             {/* Message */}
-            <textarea
-              rows={5}
-              name="message"
-              value={formData.message}
-              onChange={handleChange}
-              placeholder="Write your feedback..."
-              required
-              className="w-full border border-gray-300 rounded-xl px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#2f4a63]/30 transition resize-none"
-            />
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Constructive Feedback</label>
+              <textarea
+                rows={6}
+                name="message"
+                value={formData.message}
+                onChange={handleChange}
+                placeholder="Detail your feature requests, bug reports, or UI suggestions..."
+                required
+                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-gray-500 hover:bg-white/10 hover:border-indigo-400/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 resize-none"
+              />
+            </div>
+
+            {/* Status Feedback */}
+            {status === "success" && (
+              <div className="flex items-center justify-center gap-2 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-medium">
+                <CheckCircle2 size={18} /> Protocol acknowledged. Feedback securely transmitted.
+              </div>
+            )}
+            
+            {status === "error" && (
+              <div className="flex items-center justify-center gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm font-medium">
+                <AlertCircle size={18} /> Transmission failed. Please verify your connection.
+              </div>
+            )}
 
             {/* Button */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#2f4a63] text-white py-3 rounded-xl font-medium hover:opacity-90 transition disabled:opacity-70"
+              className="w-full mt-4 flex justify-center items-center gap-2 bg-indigo-600 text-white py-4 rounded-xl font-bold tracking-wide hover:bg-indigo-500 transition-all disabled:opacity-50 disabled:active:scale-100 active:scale-[0.98] shadow-lg shadow-indigo-600/20"
             >
-              {loading ? "Submitting..." : "Submit Feedback"}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin"></span> Transmitting...
+                </span>
+              ) : (
+                <><Send size={18} /> Submit Intelligence</>
+              )}
             </button>
-
-            {/* Status Message */}
-            {status === "success" && (
-              <p className="text-green-600 text-sm text-center mt-4">
-                ✅ Feedback submitted successfully!
-              </p>
-            )}
-
-            {status === "error" && (
-              <p className="text-red-600 text-sm text-center mt-4">
-                ❌ Something went wrong. Please try again.
-              </p>
-            )}
-
           </form>
         </div>
-      </section>
+      </div>
     </div>
   );
 }
