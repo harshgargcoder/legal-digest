@@ -18,6 +18,7 @@ export default function ProfilePage() {
     "Law Student",
     "Legal Researcher",
     "Advocate",
+
     "Paralegal",
     "Legal Tech Enthusiast",
     "Explorer"
@@ -61,7 +62,7 @@ export default function ProfilePage() {
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    
+
     setSaving(true);
     setMessage("");
 
@@ -100,17 +101,17 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-[#030712] pt-32 pb-24 px-4 sm:px-6">
       <div className="max-w-2xl mx-auto space-y-8">
-        
+
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Researcher Profile</h1>
           <p className="text-gray-500 mt-2">Manage your identity and authentication settings.</p>
         </div>
 
         <div className="bg-white dark:bg-[#0B1221] border border-gray-200 dark:border-white/10 rounded-3xl shadow-sm overflow-hidden flex flex-col md:flex-row">
-          
+
           {/* Avatar Section */}
           <div className="bg-gray-100 dark:bg-black/20 p-8 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-gray-200 dark:border-white/10 md:w-1/3 text-center">
-            
+
             <div className="relative group cursor-pointer mb-4">
               <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-3xl font-bold shadow-xl border-4 border-white dark:border-[#0B1221]">
                 {displayName ? displayName[0].toUpperCase() : (user.email ? user.email[0].toUpperCase() : "?")}
@@ -138,13 +139,13 @@ export default function ProfilePage() {
                 <p className="text-xs text-gray-500 uppercase tracking-wider">Likes</p>
               </div>
             </div>
-            
+
           </div>
 
           {/* Form Section */}
           <div className="p-8 md:w-2/3">
             <form onSubmit={handleUpdateProfile} className="space-y-6">
-              
+
               <div>
                 <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   <User size={16} className="text-gray-400" /> Display Name
