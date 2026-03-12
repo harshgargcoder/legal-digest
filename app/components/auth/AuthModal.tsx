@@ -92,29 +92,19 @@ export default function AuthModal({ isOpen, onClose }: Props) {
                 relative overflow-hidden
                 transform transition-all
                 animate-in zoom-in-95 duration-300">
-        
+
         {/* Decorative Glow */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          {/* Dark mode logo */}
           <Image
-            src="/logo-dark.png"
+            src="/new_logo.png"
             alt="Legal Digest"
-            width={180}
-            height={20}
-            className="hidden dark:block"
-          />
-          {/* Light mode logo */}
-          <Image
-            src="/logo-light.png"
-            alt="Legal Digest"
-            width={180}
-            height={20}
-            className="block dark:hidden bg-white/60 rounded-md p-1"
-           
+            width={160}
+            height={56}
+            className="object-contain h-auto"
           />
           <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 text-center tracking-wide font-medium">
             Access the Legal Terminal

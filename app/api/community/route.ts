@@ -65,7 +65,7 @@ export async function POST(req: Request) {
 export async function PUT(req: Request) {
   try {
     const body = await req.json();
-    const { id, userId, title, content, authorName, authorRole, authorAvatar } = body;
+    const { id, userId, title, content, authorName, authorRole, authorAvatar, mediaUrl } = body;
 
     if (!id || !userId || !title || !content) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -83,6 +83,7 @@ export async function PUT(req: Request) {
       .update({
         title: title,
         content: packedContent,
+        media_url: mediaUrl || undefined,
       })
       .eq("id", id)
       .eq("user_id", userId)

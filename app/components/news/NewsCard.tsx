@@ -86,62 +86,73 @@ export default function NewsCard({ item, index }: Props) {
   return (
     <div
       className={`
-      group relative overflow-hidden rounded-3xl p-6 sm:p-8
-      transition-all duration-500 border
+      group relative overflow-hidden rounded-xl p-3 sm:p-5
+      transition-all duration-500 border cursor-pointer
+      hover:-translate-y-1 hover:scale-[1.01]
       ${isTopThree
           ? `
-      bg-white border-gray-200 shadow-lg shadow-indigo-500/5
+      bg-white border-gray-200 shadow-sm
       dark:bg-gradient-to-br dark:from-[#111827] dark:to-[#0B1221]
-      dark:border-indigo-500/20 dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)]
-      hover:dark:border-indigo-500/40
+      dark:border-indigo-500/20 dark:shadow-[0_4px_20px_rgb(0,0,0,0.3)]
+      hover:shadow-xl hover:shadow-indigo-500/10
+      hover:border-indigo-400/60
+      hover:dark:border-indigo-500/60 hover:dark:shadow-[0_8px_30px_rgba(99,102,241,0.15)]
       `
           : `
       bg-white border-gray-100 shadow-sm
-      dark:bg-[#0B1221]/80 dark:border-white/5 
-      hover:dark:bg-[#111827] hover:dark:border-white/10
+      dark:bg-[#0B1221] dark:border-white/5
+      hover:shadow-xl hover:shadow-indigo-500/10
+      hover:border-indigo-300/50
+      hover:dark:bg-[#111827] hover:dark:border-indigo-500/30
+      hover:dark:shadow-[0_8px_30px_rgba(99,102,241,0.12)]
         `
         }
     `}
     >
+      {/* Shimmer sweep on hover */}
+      <div className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-20" />
+
+      {/* Animated left accent border */}
+      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-0 group-hover:h-3/4 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out z-10" />
       {/* Background Glow for Top Items */}
       {isTopThree && (
-        <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-700"></div>
+        <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-700"></div>
       )}
 
       {/* Header Section */}
-      <div className="flex justify-between items-start gap-4 mb-4 relative z-10">
-        <div className="flex flex-col items-start gap-2">
+      <div className="flex justify-between items-start gap-2 mb-2 relative z-10">
+        <div className="flex flex-col items-start gap-1">
           {/* Top 3 Badge */}
           {isTopThree && (
-            <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] font-bold tracking-wider uppercase shadow-md shadow-indigo-500/20">
-              <span className="text-xs">🔥</span> Trending Top {index + 1}
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[8px] sm:text-[9px] font-bold tracking-wider uppercase shadow-md shadow-indigo-500/20">
+              <span className="text-[9px] sm:text-[10px]">🔥</span> Trending {index + 1}
             </span>
           )}
-          <h2 className="text-xl sm:text-2xl font-bold leading-snug text-gray-900 dark:text-white group-hover:text-indigo-400 transition-colors duration-300">
+          <h2 className="text-base sm:text-xl font-bold leading-tight text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors duration-300">
             {item.title || "Untitled Legal Event"}
           </h2>
         </div>
         
-        <div className="flex-shrink-0 mt-1">
+        <div className="flex-shrink-0">
           <BookmarkButton postId={item.id} />
         </div>
       </div>
 
       {/* Meta Bar */}
-      <div className="flex items-center gap-4 text-xs font-medium text-gray-500 dark:text-gray-400 mb-5 relative z-10">
-        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-100 dark:bg-white/5 rounded-md border border-gray-200 dark:border-white/10">
-          <BookOpen size={12} className="text-indigo-400" />
+      <div className="flex items-center gap-3 text-[10px] sm:text-[11px] font-medium text-gray-500 dark:text-gray-400 mb-3 relative z-10">
+        <span className="flex items-center gap-1.5 px-1.5 py-0.5 bg-gray-50 dark:bg-white/5 rounded-md border border-gray-100 dark:border-white/10">
+          <BookOpen size={10} className="text-indigo-400" />
           {item.category}
         </span>
         <span className="flex items-center gap-1.5">
-          <Clock size={12} />
+          <Clock size={10} />
           {formattedTime}
         </span>
       </div>
 
       {/* Main Content */}
-      <div className="relative z-10 space-y-5">
-        <p className="leading-relaxed text-sm sm:text-base text-gray-600 dark:text-gray-300">
+      <div className="relative z-10 space-y-3">
+        <p className="leading-relaxed text-[13px] sm:text-sm text-gray-600 dark:text-gray-400 line-clamp-2 group-hover:line-clamp-none transition-all duration-500">
           {item.summary || "No full summary provided for this event. Click below to analyze."}
         </p>
 
@@ -246,9 +257,10 @@ export default function NewsCard({ item, index }: Props) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={logReadingActivity}
-          className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition flex-shrink-0"
+          className="group/link flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-all duration-300 flex-shrink-0"
         >
-          Read Full Document <ExternalLink size={14} />
+          Read Full Document
+          <ExternalLink size={14} className="transition-transform duration-300 group-hover/link:translate-x-1 group-hover/link:-translate-y-1" />
         </a>
       </div>
 

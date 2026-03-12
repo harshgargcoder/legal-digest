@@ -31,8 +31,15 @@ export default function Navbar() {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
+    const handleStorageChange = () => {
+      setNotificationsEnabled(localStorage.getItem("notifications") === "true");
+    };
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("storage", handleStorageChange);
+    };
   }, []);
 
   const [results, setResults] = useState<any[]>([]);
@@ -144,29 +151,34 @@ export default function Navbar() {
   return (
     <>
       <div className="fixed top-0 w-full z-[1000] px-4 pt-4 sm:pt-6 flex justify-center pointer-events-none">
-        <nav 
+        <nav
           className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl border border-gray-200/40 bg-white/40 dark:bg-[#0B1221]/40
-            ${scrolled 
-              ? "w-full max-w-4xl py-2 px-5 rounded-full" 
+            ${scrolled
+              ? "w-full max-w-4xl py-2 px-5 rounded-full"
               : "w-full max-w-7xl py-3 px-6 rounded-3xl"}
           `}
         >
           {/* Logo */}
           <div className="flex-shrink-0 flex items-center">
             <Image
-              src="/logo.png"
-              alt="Logo"
-              width={scrolled ? 110 : 140}
-              height={scrolled ? 28 : 35}
-              className="cursor-pointer transition-all duration-300"
-              style={{ filter: "brightness(0.1)" }}
-              onClick={() => router.push("/")}
+              src="/new_logo.png"
+              alt="Legal Digest"
+              width={scrolled ? 70 : 80}
+              height={scrolled ? 30 : 40}
+              className="cursor-pointer transition-all duration-300 h-auto"
+              onClick={() => {
+                if (pathname === "/") {
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                } else {
+                  router.push("/");
+                }
+              }}
             />
           </div>
 
           {/* Desktop Search & Actions */}
           <div className="hidden lg:flex items-center gap-6 flex-1 justify-end">
-            
+
             <Link href="/graph" className="text-sm font-medium text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 transition flex items-center gap-2">
               <Network size={16} /> Topology
             </Link>
@@ -177,7 +189,7 @@ export default function Navbar() {
 
             {/* Notifications */}
             <div className="relative" ref={notificationRef}>
-              <button 
+              <button
                 onClick={() => setNotificationOpen(!notificationOpen)}
                 className="p-2.5 rounded-full border border-gray-200/70 dark:border-white/10 bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-white/10 transition-all duration-300 shadow-sm relative group"
               >
@@ -200,13 +212,12 @@ export default function Navbar() {
                         Get real-time intelligence alerts for major legal rulings and community insights.
                       </p>
                     </div>
-                    <button 
+                    <button
                       onClick={toggleNotifications}
-                      className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all border ${
-                        notificationsEnabled 
-                          ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400' 
-                          : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20'
-                      }`}
+                      className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all border ${notificationsEnabled
+                        ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400'
+                        : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20'
+                        }`}
                     >
                       {notificationsEnabled ? "Disable Alerts" : "Enable Alerts"}
                     </button>
@@ -337,10 +348,10 @@ export default function Navbar() {
             </button>
           </div>
         </nav>
-        
+
         {/* Mobile Dropdown */}
         <div
-          className={`absolute top-[calc(100%+8px)] w-[calc(100%-2rem)] max-w-md bg-white border border-gray-100 shadow-2xl rounded-3xl overflow-hidden pointer-events-auto transition-all duration-300 z-[1100] ${menuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}
+          className={`absolute top-[calc(100%+8px)] left-0 right-0 mx-auto w-full max-w-md bg-white border border-gray-100 shadow-2xl rounded-3xl overflow-hidden pointer-events-auto transition-all duration-300 z-[1100] ${menuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}
         >
           <div className="py-2">
             <div className="flex flex-col items-start gap-2 text-base font-medium px-4 pt-4">
@@ -367,7 +378,7 @@ export default function Navbar() {
                     <BookmarkIcon size={18} className="text-indigo-500" /> Saved Cases
                   </Link>
                   <button onClick={toggleNotifications} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
-                    <Bell size={18} className="text-indigo-500" /> 
+                    <Bell size={18} className="text-indigo-500" />
                     <span className="flex-1 text-left">Push Notifications</span>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${notificationsEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
                       {notificationsEnabled ? 'ON' : 'OFF'}

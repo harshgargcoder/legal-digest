@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   description:
     "Your daily dose of legal news, insights, and analysis. Stay informed with our curated feed of the latest developments in law, politics, finance, sports, and global affairs. Legal-Digest: Where law meets the world.",
   icons: {
-    icon: "/logo1.png",
+    icon: "/new_logo.png",
   },
 };
 

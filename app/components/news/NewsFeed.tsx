@@ -8,12 +8,17 @@ interface Props {
   category: string;
   search: string;
   region?: string;
+  preferences?: {
+    categories: string[];
+    topics: string[];
+  } | null;
 }
 
-export default function NewsFeed({ category, search, region }: Props) {
+export default function NewsFeed({ category, search, region, preferences }: Props) {
   const [articles, setArticles] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
 
   async function fetchNews(pageNumber = 1, reset = false) {
@@ -25,6 +30,12 @@ export default function NewsFeed({ category, search, region }: Props) {
 
     if (category && category !== "All") {
       url += `&category=${encodeURIComponent(category)}`;
+    } else if (preferences?.categories && preferences.categories.length > 0) {
+      url += `&categories=${encodeURIComponent(preferences.categories.join(","))}`;
+    }
+
+    if (preferences?.topics && preferences.topics.length > 0) {
+      url += `&topics=${encodeURIComponent(preferences.topics.join(","))}`;
     }
 
     if (region) {
@@ -48,9 +59,11 @@ export default function NewsFeed({ category, search, region }: Props) {
 
     setHasMore(newArticles.length === 10);
     setLoading(false);
+    if (reset) setInitialLoading(false);
   }
 
   useEffect(() => {
+    setInitialLoading(true);
     const delay = setTimeout(() => {
       setArticles([]);
       setPage(1);
@@ -59,7 +72,7 @@ export default function NewsFeed({ category, search, region }: Props) {
     }, 300);
 
     return () => clearTimeout(delay);
-  }, [category, search, region]);
+  }, [category, search, region, preferences]);
 
   const handleLoadMore = () => {
     const nextPage = page + 1;
@@ -68,6 +81,18 @@ export default function NewsFeed({ category, search, region }: Props) {
   };
 
   const slicedArticles = articles.slice(1);
+
+  // Show a single centered spinner while the first page of results is loading
+  if (initialLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 gap-4">
+        <span className="w-10 h-10 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
+        <p className="text-sm text-gray-400 tracking-widest uppercase font-medium animate-pulse">
+          Decrypting Feed…
+        </p>
+      </div>
+    );
+  }
 
   return (
     <>

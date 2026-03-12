@@ -5,7 +5,7 @@ interface Props {
   setCategory: React.Dispatch<React.SetStateAction<string>>;
 }
 
-import { Globe, Shield, Landmark, Scale, BookOpen, Building2, Activity, Trophy } from "lucide-react";
+import { Globe, Shield, Landmark, Scale, BookOpen, Building2, Activity, Trophy, Users, Gavel } from "lucide-react";
 
 const categories = [
   { name: "All", icon: Globe },
@@ -13,6 +13,8 @@ const categories = [
   { name: "High Court", icon: Scale },
   { name: "Constitutional", icon: BookOpen },
   { name: "Corporate & Finance", icon: Building2 },
+  { name: "Criminal", icon: Gavel },
+  { name: "Family", icon: Users },
   { name: "General", icon: Activity },
   { name: "Sports", icon: Trophy },
   { name: "Global", icon: Shield }
@@ -31,7 +33,7 @@ export default function CategoryFilter({
             key={cat.name}
             onClick={() => setCategory(cat.name)}
             className={`
-            flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm whitespace-nowrap font-medium
+            flex items-center gap-2 px-4 py-2 rounded-xl text-xs whitespace-nowrap font-medium
             transition-all duration-300 border
             ${category === cat.name
                 ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/25"
@@ -39,7 +41,7 @@ export default function CategoryFilter({
               }
           `}
           >
-            <Icon size={16} className={category === cat.name ? "text-indigo-200" : "text-gray-400 dark:text-gray-500"} />
+            <Icon size={14} className={category === cat.name ? "text-indigo-200" : "text-gray-400 dark:text-gray-500"} />
             {cat.name}
           </button>
         )

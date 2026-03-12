@@ -1,6 +1,22 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
+// Categories that should only show National (Indian) news
+const NATIONAL_ONLY_CATEGORIES = [
+  "Supreme Court",
+  "High Court",
+  "Constitutional",
+  "General",
+  "Family",
+  "Criminal",
+];
+
+// Categories with 50/50 National vs International split
+const MIXED_CATEGORIES = ["Finance", "Sports"];
+
+// Categories that show only International news
+const INTERNATIONAL_ONLY_CATEGORIES = ["Global"];
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -47,16 +63,101 @@ export async function GET(request: Request) {
       });
     }
 
+    const categories = searchParams.get("categories")?.split(",");
+    const topics = searchParams.get("topics")?.split(",");
+
+    // Determine if we need special regional handling
+    const isMixedCategory = category && MIXED_CATEGORIES.includes(category);
+    const isNationalOnly = category && NATIONAL_ONLY_CATEGORIES.includes(category);
+    const isInternationalOnly = category && INTERNATIONAL_ONLY_CATEGORIES.includes(category);
+
+    // Override region filter if the user provided one explicitly
+    const explicitRegion = region;
+
+    // ── MIXED CATEGORY (50/50 split) ──────────────────────────────────────────
+    if (isMixedCategory && !explicitRegion && !search && !topics) {
+      const half = Math.ceil(limit / 2);
+
+      const categoryStr = category as string;
+      const buildMixedQuery = (regionFilter: string) => {
+        let q = supabase.from("legal_news").select("*", { count: "exact" });
+        q = q.ilike("category", categoryStr.trim());
+        q = q.eq("region", regionFilter);
+        q = q.order("published_at", { ascending: false }).order("id", { ascending: false });
+        return q.range(0, half - 1);
+      };
+
+      const [nationalResult, intlResult] = await Promise.all([
+        buildMixedQuery("National"),
+        buildMixedQuery("International"),
+      ]);
+
+      // Also fetch articles with old region values ('India'/'Global') for backwards compatibility
+      const [oldNationalResult, oldIntlResult] = await Promise.all([
+        buildMixedQuery("India"),
+        buildMixedQuery("Global"),
+      ]);
+
+      const nationalArticles = [...(nationalResult.data || []), ...(oldNationalResult.data || [])];
+      const intlArticles = [...(intlResult.data || []), ...(oldIntlResult.data || [])];
+
+      // Interleave results: N, I, N, I, ...
+      const interleaved: any[] = [];
+      const maxLen = Math.max(nationalArticles.length, intlArticles.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (nationalArticles[i]) interleaved.push(nationalArticles[i]);
+        if (intlArticles[i]) interleaved.push(intlArticles[i]);
+      }
+
+      const sliced = interleaved.slice(0, limit);
+      const totalAvailable =
+        (nationalResult.count ?? 0) +
+        (intlResult.count ?? 0) +
+        (oldNationalResult.count ?? 0) +
+        (oldIntlResult.count ?? 0);
+
+      return NextResponse.json({
+        success: true,
+        articles: sliced,
+        total: totalAvailable,
+        page,
+        limit,
+        hasMore: totalAvailable > limit,
+        lastUpdated,
+        regionInfo: { national: nationalArticles.length, international: intlArticles.length },
+      });
+    }
+
+    // ── STANDARD QUERY ────────────────────────────────────────────────────────
     let query = supabase
       .from("legal_news")
       .select("*", { count: "exact" });
 
     if (category && category !== "All") {
       query = query.ilike("category", category.trim());
+    } else if (categories && categories.length > 0 && !categories.includes("All")) {
+      query = query.in("category", categories);
     }
 
-    if (region) {
-      query = query.eq("region", region);
+    // Apply region constraint — support both old ('India'/'Global') and new ('National'/'International') values
+    if (explicitRegion) {
+      // Explicit override takes priority
+      query = query.eq("region", explicitRegion);
+    } else if (isNationalOnly) {
+      // Match both 'National' (new RSS) and 'India' (old fetch-news articles)
+      query = query.or("region.eq.National,region.eq.India");
+    } else if (isInternationalOnly) {
+      // Match both 'International' (new RSS) and 'Global' (old fetch-news articles)
+      query = query.or("region.eq.International,region.eq.Global");
+    }
+
+    // Build topics filter
+    if (topics && topics.length > 0) {
+      const topicFilters = topics.map(topic => `title.ilike.%${topic.trim()}%`).join(",");
+      const summaryFilters = topics.map(topic => `summary.ilike.%${topic.trim()}%`).join(",");
+      const contentFilters = topics.map(topic => `content.ilike.%${topic.trim()}%`).join(",");
+      const orFilter = `${topicFilters},${summaryFilters},${contentFilters}`;
+      query = query.or(orFilter);
     }
 
     if (search && search.trim() !== "") {

@@ -5,7 +5,9 @@ export type Category =
   | "Finance"
   | "Sports"
   | "General"
-  | "Global";
+  | "Global"
+  | "Criminal"
+  | "Family";
 
 export interface RawArticle {
   title: string;
@@ -167,8 +169,7 @@ export function processArticles(
         combinedText,
         a.feedCategory,
       ),
-      published_at:
-        a.publishedAt ?? new Date().toISOString(),
+      published_at: a.publishedAt ?? new Date().toISOString(),
     };
   });
 }

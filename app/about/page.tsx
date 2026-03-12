@@ -1,4 +1,4 @@
-import { Scale, BookOpen, Clock, ShieldCheck } from "lucide-react";
+import { Scale, BookOpen, Clock, ShieldCheck, Network, Users, Layers, Bell } from "lucide-react";
 
 export default function AboutPage() {
   return (
@@ -64,6 +64,50 @@ export default function AboutPage() {
             </p>
           </div>
 
+        </div>
+      </section>
+      {/* Scholarly Intelligence Toolkit */}
+      <section className="max-w-6xl mx-auto px-6 mt-32 mb-32">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">Scholarly Intelligence Toolkit</h2>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Advanced features specifically engineered to empower law students and legal researchers.
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            {
+              icon: <Network className="text-indigo-400" size={24} />,
+              title: "Case Topology",
+              desc: "Visualize the interconnected web of legal precedents and discover hidden cross-references between judgments."
+            },
+            {
+              icon: <Users className="text-purple-400" size={24} />,
+              title: "Community Insights",
+              desc: "Access real-time analysis and perspectives from a collaborative network of legal scholars and advocates."
+            },
+            {
+              icon: <Layers className="text-blue-400" size={24} />,
+              title: "Personalized Feed",
+              desc: "Train your home feed to prioritize specific domains—from Constitutional law to Corporate precedents."
+            },
+            {
+              icon: <Bell className="text-yellow-400" size={24} />,
+              title: "Intelligence Alerts",
+              desc: "Stay ahead with push notifications for milestone Supreme Court rulings before they hit mainstream headlines."
+            }
+          ].map((feature, i) => (
+            <div key={i} className="bg-white/5 border border-white/10 p-6 rounded-3xl hover:bg-white/[0.07] transition-all group">
+              <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mb-5 group-hover:scale-110 transition-transform">
+                {feature.icon}
+              </div>
+              <h3 className="text-xl font-bold text-white mb-3">{feature.title}</h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                {feature.desc}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 

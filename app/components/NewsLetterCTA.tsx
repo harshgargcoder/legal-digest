@@ -37,8 +37,8 @@ export default function NewsletterCTA() {
   };
 
   return (
-    <section className="max-w-5xl mx-auto px-6 my-24">
-      <div className="bg-[#f8fafc] border border-gray-200 rounded-3xl p-12 text-center">
+    <section className="max-w-5xl mx-auto px-6 my-16 sm:my-24">
+      <div className="bg-[#f8fafc] border border-gray-200 rounded-3xl p-6 sm:p-12 text-center">
 
         <h2 className="text-3xl font-semibold text-[#2f4a63]">
           Stay Updated With Legal Developments

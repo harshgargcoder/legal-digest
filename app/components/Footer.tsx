@@ -11,11 +11,11 @@ export default function Footer() {
           {/* Logo + Description */}
           <div className="max-w-sm">
             <Image
-              src="/logo.png"   // <-- yaha apna logo path daalna
+              src="/new_logo.png"
               alt="Legal Digest"
-              width={150}
-              height={50}
-              className="object-contain"
+              width={140}
+              height={48}
+              className="object-contain h-auto"
             />
 
             <p className="mt-5 text-sm text-gray-600 leading-relaxed">
@@ -25,7 +25,7 @@ export default function Footer() {
           </div>
 
           {/* Links Section */}
-          <div className="flex gap-16 text-sm">
+          <div className="flex gap-8 sm:gap-16 text-sm">
 
             <div className="flex flex-col gap-3">
               <span className="font-semibold text-[#2f4a63]">

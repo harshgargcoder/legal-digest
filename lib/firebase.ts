@@ -2,13 +2,13 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyAibinS3rWf_Q03VF-tv2nVlb0T24nxy7c",
-  authDomain: "legaldigest-6288.firebaseapp.com",
-  projectId: "legaldigest-6288",
-  storageBucket: "legaldigest-6288.firebasestorage.app",
-  messagingSenderId: "894612942958",
-  appId: "1:894612942958:web:0aea9d14541882551a367f",
-  measurementId: "G-BS5J0RXYPJ"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
