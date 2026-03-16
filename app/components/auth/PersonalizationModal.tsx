@@ -92,19 +92,19 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose}></div>
       
       {/* Modal */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#0B1221] rounded-3xl shadow-2xl overflow-hidden border border-gray-200 dark:border-white/10 animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-200 animate-in zoom-in-95 duration-200">
         
         {/* Header */}
-        <div className="px-6 py-5 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-gray-50/50 dark:bg-white/5">
+        <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-slate-50">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Personalize Your Feed</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Step {step} of 2</p>
+            <h2 className="text-xl font-bold text-gray-900">Personalize Your Feed</h2>
+            <p className="text-xs text-gray-500 mt-1">Step {step} of 2</p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 dark:hover:bg-white/10 rounded-full transition">
-            <X size={20} className="text-gray-500 dark:text-gray-400" />
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition">
+            <X size={20} className="text-gray-500" />
           </button>
         </div>
 
@@ -113,8 +113,8 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
           {step === 1 ? (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2">Choose Categories</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Select the legal domains you are interested in.</p>
+                <h3 className="text-lg font-semibold text-gray-800 mb-2">Choose Categories</h3>
+                <p className="text-sm text-gray-500">Select the legal domains you are interested in.</p>
               </div>
               
               <div className="grid grid-cols-2 gap-3 pt-2">
@@ -128,7 +128,7 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
                       className={`flex items-center gap-3 p-3 rounded-2xl border transition-all text-sm font-medium ${
                         isSelected 
                           ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/20" 
-                          : "bg-white/5 dark:bg-black/20 border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 hover:border-indigo-400/50"
+                          : "bg-white border-gray-200 text-slate-700 hover:border-indigo-400/50"
                       }`}
                     >
                       <Icon size={18} className={isSelected ? "text-white" : "text-indigo-400"} />
@@ -142,8 +142,8 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
           ) : (
             <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
               <div>
-                <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-1">Follow Specific Topics</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Add common legal topics or search for custom ones.</p>
+                <h3 className="text-lg font-semibold text-gray-800 mb-1">Follow Specific Topics</h3>
+                <p className="text-sm text-gray-500">Add common legal topics or search for custom ones.</p>
               </div>
 
               {/* Search Box */}
@@ -154,7 +154,7 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && addCustomTopic()}
                   placeholder="Search topics (e.g. CJI, GST)..."
-                  className="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm text-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none"
                 />
                 <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 {searchTerm.trim() && (
@@ -177,8 +177,8 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
                       onClick={() => toggleTopic(topic)}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                         isSelected 
-                          ? "bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-700 dark:text-indigo-300" 
-                          : "bg-white/5 border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:border-indigo-400"
+                          ? "bg-indigo-100 border-indigo-500 text-indigo-700" 
+                          : "bg-white border-gray-200 text-gray-600 hover:border-indigo-400"
                       }`}
                     >
                       {topic}
@@ -189,7 +189,7 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
                   <button
                     key={topic}
                     onClick={() => toggleTopic(topic)}
-                    className="px-3 py-1.5 rounded-full text-xs font-medium border bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5"
+                    className="px-3 py-1.5 rounded-full text-xs font-medium border bg-indigo-100 border-indigo-500 text-indigo-700 flex items-center gap-1.5"
                   >
                     {topic} <X size={10} />
                   </button>
@@ -200,17 +200,17 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-5 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5">
+        <div className="px-6 py-5 border-t border-gray-100 bg-slate-50">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl">
-              <p className="text-xs text-red-600 dark:text-red-400 font-medium">{error}</p>
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl">
+              <p className="text-xs text-red-600 font-medium">{error}</p>
             </div>
           )}
           
           <div className="flex items-center justify-between">
             <button 
               onClick={() => step === 1 ? onClose() : setStep(1)}
-              className="text-sm font-medium text-gray-500 hover:text-gray-900 dark:hover:text-white transition"
+              className="text-sm font-medium text-gray-500 hover:text-gray-900 transition"
             >
               {step === 1 ? "Skip for now" : "Back"}
             </button>

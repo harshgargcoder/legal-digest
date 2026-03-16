@@ -18,7 +18,7 @@ export default function Footer() {
               className="object-contain h-auto"
             />
 
-            <p className="mt-5 text-sm text-gray-600 leading-relaxed">
+            <p className="mt-5 text-sm text-slate-700 leading-relaxed font-medium">
               Structured legal news, judgments and policy updates —
               curated for modern legal readers.
             </p>
@@ -28,40 +28,40 @@ export default function Footer() {
           <div className="flex gap-8 sm:gap-16 text-sm">
 
             <div className="flex flex-col gap-3">
-              <span className="font-semibold text-[#2f4a63]">
+              <span className="font-bold text-[#2f4a63]">
                 Company
               </span>
 
               <Link
                 href="/about"
-                className="text-gray-600 hover:text-[#2f4a63] transition duration-200"
+                className="text-slate-600 hover:text-[#2f4a63] font-medium transition duration-200"
               >
                 About
               </Link>
 
               <Link
                 href="/feedback"
-                className="text-gray-600 hover:text-[#2f4a63] transition duration-200"
+                className="text-slate-600 hover:text-[#2f4a63] font-medium transition duration-200"
               >
                 Feedback
               </Link>
             </div>
 
             <div className="flex flex-col gap-3">
-              <span className="font-semibold text-[#2f4a63]">
+              <span className="font-bold text-[#2f4a63]">
                 Explore
               </span>
 
               <Link
                 href="/"
-                className="text-gray-600 hover:text-[#2f4a63] transition duration-200"
+                className="text-slate-600 hover:text-[#2f4a63] font-medium transition duration-200"
               >
                 Latest News
               </Link>
 
               <Link
                 href="/categories"
-                className="text-gray-600 hover:text-[#2f4a63] transition duration-200"
+                className="text-slate-600 hover:text-[#2f4a63] font-medium transition duration-200"
               >
                 Categories
               </Link>

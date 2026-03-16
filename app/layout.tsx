@@ -6,6 +6,8 @@ import Footer from "@/app/components/Footer";
 import Script from "next/script";
 import { Search } from "lucide-react";
 import { SearchProvider } from "./context/SearchContext";
+import SupportBot from "@/app/components/SupportBot";
+import NotificationHub from "@/app/components/NotificationHub";
 
 const GA_ID = "G-Z6NGF984TS";
 
@@ -46,6 +48,8 @@ export default function RootLayout({
           </main>
 
           <Footer />
+          <NotificationHub />
+          <SupportBot />
 
           {/* Google Analytics */}
           <Script

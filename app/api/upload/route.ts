@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { v2 as cloudinary } from "cloudinary";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(req: Request) {
   try {
@@ -21,26 +22,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "File exceeds 5MB limit" }, { status: 400 });
     }
 
-    const fileExt = file.name.split(".").pop();
-    const fileName = `${userId}_${Date.now()}.${fileExt}`;
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    // Upload to Supabase Storage (requires the bucket 'community_media' to exist)
-    const { data, error } = await supabase.storage
-      .from("community_media")
-      .upload(fileName, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+    const username = formData.get("username") as string;
+    const fileType = file.type.startsWith("video") ? "video" : "image";
+    const dateTime = new Date().toISOString().replace(/[:.]/g, "-");
+    const customPublicId = `legaldigest$${username || userId}$${fileType}_${dateTime}`;
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    return new Promise((resolve) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: "auto",
+          folder: "community_media",
+          public_id: customPublicId,
+        },
+        (error, result) => {
+          if (error) {
+            resolve(NextResponse.json({ error: error.message }, { status: 500 }));
+          } else {
+            resolve(NextResponse.json({ success: true, url: result?.secure_url }));
+          }
+        }
+      );
 
-    const { data: publicUrlData } = supabase.storage
-      .from("community_media")
-      .getPublicUrl(fileName);
+      uploadStream.end(buffer);
+    }) as Promise<NextResponse>;
 
-    return NextResponse.json({ success: true, url: publicUrlData.publicUrl });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

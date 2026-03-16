@@ -38,21 +38,21 @@ function BookmarkItem({ post, index }: { post: any, index: number }) {
   };
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden shadow-xl backdrop-blur-md transition-all hover:border-indigo-500/30">
+    <div className="bg-white border border-gray-200 rounded-3xl overflow-hidden shadow-sm transition-all hover:border-indigo-500/30">
       {/* The Actual News Component */}
       <NewsCard item={post} index={index} />
       
       {/* The Note Editor Section */}
-      <div className="border-t border-white/10 bg-[#0B1221] p-5 sm:p-6">
+      <div className="border-t border-gray-100 bg-slate-50 p-5 sm:p-6">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2 text-indigo-400 font-medium text-sm tracking-wide uppercase">
+          <div className="flex items-center gap-2 text-indigo-600 font-bold text-sm tracking-wide uppercase">
             <Edit3 size={16} />
             <h2>Private Research Note</h2>
           </div>
           {!isEditing && note && (
             <button 
               onClick={() => setIsEditing(true)}
-              className="text-xs text-gray-400 hover:text-indigo-400 transition"
+              className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition"
             >
               Edit Note
             </button>
@@ -65,7 +65,7 @@ function BookmarkItem({ post, index }: { post: any, index: number }) {
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder="Add your thoughts, references, or essay notes here..."
-              className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-sm text-gray-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none resize-none shadow-inner"
+              className="w-full bg-white border border-gray-200 rounded-xl p-4 text-sm text-slate-900 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all outline-none resize-none shadow-sm"
               rows={3}
             />
             <div className="flex justify-end gap-3">
@@ -80,24 +80,24 @@ function BookmarkItem({ post, index }: { post: any, index: number }) {
               <button 
                 onClick={handleSaveNote}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg shadow-lg shadow-indigo-600/20 transition disabled:opacity-50"
+                className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-lg shadow-indigo-600/20 transition disabled:opacity-50"
               >
                 {isSaving ? "Encrypting..." : <><Save size={14}/> Save to Vault</>}
               </button>
             </div>
           </div>
         ) : (
-          <div className="bg-black/20 rounded-xl p-4 border border-white/5 animate-in fade-in duration-200">
+           <div className="bg-slate-100 rounded-xl p-4 border border-gray-200 animate-in fade-in duration-200">
             {note ? (
-              <p className="text-sm text-gray-300 whitespace-pre-wrap leading-relaxed">{note}</p>
+              <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed font-medium">{note}</p>
             ) : (
-              <p className="text-sm text-gray-500 italic">No notes attached.</p>
+              <p className="text-sm text-slate-500 italic">No notes attached.</p>
             )}
           </div>
         )}
         
         {saved && (
-          <div className="mt-3 flex items-center gap-2 text-emerald-400 text-xs font-medium animate-in fade-in slide-in-from-bottom-2">
+          <div className="mt-3 flex items-center gap-2 text-emerald-600 text-xs font-bold animate-in fade-in slide-in-from-bottom-2">
             <CheckCircle2 size={14} /> Note synchronized securely.
           </div>
         )}
@@ -152,19 +152,19 @@ export default function BookmarksPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#030712] pt-32 pb-16 px-6">
+      <div className="min-h-screen bg-slate-50 pt-32 pb-16 px-6">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-2 text-white/90">
+          <h1 className="text-3xl font-bold mb-2 text-slate-900">
             Intelligence Vault
           </h1>
-          <p className="text-sm text-gray-500 mb-8">
-            Encrypting and decoding user credentials...
+          <p className="text-sm text-slate-500 mb-8 font-medium">
+            Decrypting user credentials...
           </p>
           <div className="flex flex-col gap-8">
             {[1, 2, 3].map((item) => (
               <div
                 key={item}
-                className="animate-pulse bg-white/5 border border-white/10 h-64 rounded-3xl"
+                className="animate-pulse bg-white border border-gray-200 h-64 rounded-3xl"
               ></div>
             ))}
           </div>
@@ -174,34 +174,34 @@ export default function BookmarksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#030712] pt-32 pb-16 px-4 sm:px-6">
+    <div className="min-h-screen bg-slate-50 pt-32 pb-16 px-4 sm:px-6">
       <div className="max-w-4xl mx-auto">
         
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
               Intelligence Vault
             </h1>
-            <p className="text-gray-400 mt-2 text-sm">Review your saved legal intelligence and manage private research notes.</p>
+            <p className="text-slate-600 mt-2 text-sm font-medium">Review your saved legal intelligence and manage private research notes.</p>
           </div>
         </div>
 
         {posts.length === 0 ? (
-          <div className="bg-white/5 border border-white/10 rounded-3xl text-center py-24">
-            <div className="text-5xl mb-6 opacity-80">🔖</div>
+          <div className="bg-white border border-gray-200 rounded-3xl text-center py-24 shadow-sm">
+            <div className="text-5xl mb-6 opacity-30">🔖</div>
 
-            <h2 className="text-xl font-semibold text-white/90 mb-3">
+            <h2 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">
               Vault is Empty
             </h2>
 
-            <p className="text-gray-500 max-w-md mx-auto mb-6">
+            <p className="text-slate-600 max-w-md mx-auto mb-8 font-medium">
               Start saving important legal updates and judgments to
               access them quickly anytime.
             </p>
 
             <a
               href="/"
-              className="inline-block bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 px-6 py-3 rounded-xl text-sm font-medium hover:bg-indigo-600/30 transition"
+              className="inline-block bg-indigo-600 text-white px-8 py-3 rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition active:scale-95"
             >
               Explore Latest Updates
             </a>

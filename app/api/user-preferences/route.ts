@@ -33,7 +33,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { userId, categories, topics } = await req.json();
+    const { userId, categories, topics, role, last_notified_at } = await req.json();
 
     if (!userId) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
@@ -56,8 +56,10 @@ export async function POST(req: Request) {
       const { data, error: updateErr } = await supabase
         .from("user_preferences")
         .update({
-          categories: categories || [],
-          topics: topics || [],
+          categories: categories || undefined,
+          topics: topics || undefined,
+          role: role || undefined,
+          last_notified_at: last_notified_at || undefined,
           updated_at: new Date().toISOString()
         })
         .eq("user_id", userId)
@@ -78,6 +80,8 @@ export async function POST(req: Request) {
             user_id: userId,
             categories: categories || [],
             topics: topics || [],
+            role: role || "Law Student",
+            last_notified_at: last_notified_at || new Date().toISOString()
           },
         ])
         .select();

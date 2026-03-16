@@ -35,28 +35,28 @@ export default function FeedbackPage() {
   };
 
   return (
-    <div className="bg-[#030712] min-h-screen pt-32 pb-20 px-6">
+    <div className="bg-slate-50 min-h-screen pt-32 pb-20 px-6">
       <div className="max-w-3xl mx-auto">
         
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center p-4 bg-indigo-500/10 rounded-full mb-6 ring-1 ring-indigo-500/30">
-            <MessageSquare size={32} className="text-indigo-400" />
+            <MessageSquare size={32} className="text-indigo-600" />
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">Transmit Feedback</h1>
-          <p className="text-gray-400 text-lg">Your structural insights dictate our platform's evolution.</p>
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Transmit Feedback</h1>
+          <p className="text-gray-600 text-lg">Your structural insights dictate our platform's evolution.</p>
         </div>
 
         {/* Form Container */}
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-3xl p-8 sm:p-10 shadow-xl relative overflow-hidden">
           {/* Subtle Glow inside form */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 blur-[80px] rounded-full pointer-events-none"></div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[80px] rounded-full pointer-events-none"></div>
 
           <form className="space-y-6 relative z-10" onSubmit={handleSubmit}>
             <div className="grid sm:grid-cols-2 gap-6">
               {/* Name */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Researcher Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Researcher Name</label>
                 <input
                   type="text"
                   name="name"
@@ -64,13 +64,13 @@ export default function FeedbackPage() {
                   onChange={handleChange}
                   placeholder="E.g. Harish Salve"
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-gray-500 hover:bg-white/10 hover:border-indigo-400/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900 placeholder:text-gray-500 hover:bg-gray-100 hover:border-indigo-400/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300"
                 />
               </div>
 
               {/* Email */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Secure Email Address</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Secure Email Address</label>
                 <input
                   type="email"
                   name="email"
@@ -78,14 +78,14 @@ export default function FeedbackPage() {
                   onChange={handleChange}
                   placeholder="contact@chambers.in"
                   required
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-gray-500 hover:bg-white/10 hover:border-indigo-400/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300"
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900 placeholder:text-gray-500 hover:bg-gray-100 hover:border-indigo-400/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300"
                 />
               </div>
             </div>
 
             {/* Message */}
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Constructive Feedback</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Constructive Feedback</label>
               <textarea
                 rows={6}
                 name="message"
@@ -93,19 +93,19 @@ export default function FeedbackPage() {
                 onChange={handleChange}
                 placeholder="Detail your feature requests, bug reports, or UI suggestions..."
                 required
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3.5 text-white placeholder:text-gray-500 hover:bg-white/10 hover:border-indigo-400/50 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 resize-none"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3.5 text-gray-900 placeholder:text-gray-500 hover:bg-gray-100 hover:border-indigo-400/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-300 resize-none"
               />
             </div>
 
             {/* Status Feedback */}
             {status === "success" && (
-              <div className="flex items-center justify-center gap-2 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-sm font-medium">
+              <div className="flex items-center justify-center gap-2 p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-600 text-sm font-medium">
                 <CheckCircle2 size={18} /> Protocol acknowledged. Feedback securely transmitted.
               </div>
             )}
             
             {status === "error" && (
-              <div className="flex items-center justify-center gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm font-medium">
+              <div className="flex items-center justify-center gap-2 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-600 text-sm font-medium">
                 <AlertCircle size={18} /> Transmission failed. Please verify your connection.
               </div>
             )}

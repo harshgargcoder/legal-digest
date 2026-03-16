@@ -38,9 +38,9 @@ export default function NewsletterCTA() {
 
   return (
     <section className="max-w-5xl mx-auto px-6 my-16 sm:my-24">
-      <div className="bg-[#f8fafc] border border-gray-200 rounded-3xl p-6 sm:p-12 text-center">
+      <div className="bg-white border border-gray-200 rounded-3xl p-6 sm:p-12 text-center shadow-xl">
 
-        <h2 className="text-3xl font-semibold text-[#2f4a63]">
+        <h2 className="text-3xl font-semibold text-gray-900">
           Stay Updated With Legal Developments
         </h2>
 
@@ -60,7 +60,7 @@ export default function NewsletterCTA() {
             placeholder="Enter your email"
             className="px-5 py-3 rounded-xl border border-gray-300 w-full sm:w-80 
                        bg-white text-gray-800 placeholder-gray-400
-                       focus:outline-none focus:border-[#2f4a63]"
+                       focus:outline-none focus:border-indigo-600"
           />
 
           <button

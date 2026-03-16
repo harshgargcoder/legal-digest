@@ -106,8 +106,7 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
           <div
             className="
             relative overflow-hidden p-8 sm:p-10 rounded-3xl transition-all duration-500
-            bg-[#0B1221] border border-indigo-500/20 shadow-2xl
-            dark:bg-gradient-to-br dark:from-[#0B1221] dark:to-[#111827]
+            bg-white border border-gray-200 shadow-xl
             hover:border-indigo-500/40 hover:shadow-indigo-500/10
           "
           >
@@ -117,27 +116,27 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
 
             <div className="relative z-10 flex flex-col h-full justify-between">
               <div>
-                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 mb-6 backdrop-blur-md">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse"></span>
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase bg-indigo-600 text-white border border-indigo-700 mb-6 backdrop-blur-md shadow-lg shadow-indigo-600/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-200 animate-pulse"></span>
                   Top Story
                 </span>
 
-                <h2 className="text-2xl sm:text-4xl font-bold mt-2 text-white leading-tight group-hover:text-indigo-200 transition-colors duration-300">
+                <h2 className="text-2xl sm:text-4xl font-bold mt-2 text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors duration-300">
                   {articles[0].title}
                 </h2>
 
-                <p className="mt-5 text-base sm:text-lg text-gray-300 leading-relaxed max-w-2xl">
+                <p className="mt-5 text-base sm:text-lg text-gray-600 leading-relaxed max-w-2xl">
                   {articles[0].summary}
                 </p>
               </div>
 
-              <div className="mt-8 flex items-center justify-between border-t border-white/10 pt-6">
-                <div className="flex items-center gap-4 text-xs font-medium text-gray-400">
-                  <span className="px-3 py-1 bg-white/5 rounded-lg border border-white/10 text-indigo-300">{articles[0].category}</span>
+              <div className="mt-8 flex items-center justify-between border-t border-gray-100 pt-6">
+                <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
+                  <span className="px-3 py-1 bg-gray-50 rounded-lg border border-gray-200 text-indigo-600">{articles[0].category}</span>
                   <span>{new Date(articles[0].published_at).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" })}</span>
                 </div>
                 
-                <div className="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-500 transition-colors duration-300 text-white">
+                <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-500 transition-colors duration-300 text-gray-400 hover:text-white">
                   <ArrowUpRight size={18} className="group-hover:rotate-12 transition-transform duration-300" />
                 </div>
               </div>
@@ -164,8 +163,8 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
             disabled={loading}
             className="
             px-8 py-3.5 rounded-full font-semibold transition-all duration-300 text-sm tracking-wide
-            bg-[#111827] text-white border border-white/10 hover:border-white/20 hover:bg-[#1f2937]
-            disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3
+            bg-white text-gray-900 border border-gray-200 hover:border-indigo-500 hover:bg-gray-50
+            disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 shadow-md
           "
           >
             {loading && (

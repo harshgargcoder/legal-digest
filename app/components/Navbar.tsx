@@ -14,6 +14,7 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { search, setSearch } = useSearch();
+  const [mounted, setMounted] = useState(false);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -24,6 +25,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     setNotificationsEnabled(localStorage.getItem("notifications") === "true");
   }, []);
 
@@ -152,7 +154,7 @@ export default function Navbar() {
     <>
       <div className="fixed top-0 w-full z-[1000] px-4 pt-4 sm:pt-6 flex justify-center pointer-events-none">
         <nav
-          className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl border border-gray-200/40 bg-white/40 dark:bg-[#0B1221]/40
+          className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl border border-gray-200/40 bg-white/40
             ${scrolled
               ? "w-full max-w-4xl py-2 px-5 rounded-full"
               : "w-full max-w-7xl py-3 px-6 rounded-3xl"}
@@ -179,11 +181,11 @@ export default function Navbar() {
           {/* Desktop Search & Actions */}
           <div className="hidden lg:flex items-center gap-6 flex-1 justify-end">
 
-            <Link href="/graph" className="text-sm font-medium text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 transition flex items-center gap-2">
+            <Link href="/graph" className="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition flex items-center gap-2">
               <Network size={16} /> Topology
             </Link>
 
-            <Link href="/community" className="text-sm font-medium text-gray-600 hover:text-indigo-600 dark:text-gray-300 dark:hover:text-indigo-400 transition flex items-center gap-2">
+            <Link href="/community" className="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition flex items-center gap-2">
               <Users size={16} /> Community
             </Link>
 
@@ -191,31 +193,31 @@ export default function Navbar() {
             <div className="relative" ref={notificationRef}>
               <button
                 onClick={() => setNotificationOpen(!notificationOpen)}
-                className="p-2.5 rounded-full border border-gray-200/70 dark:border-white/10 bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-white/10 transition-all duration-300 shadow-sm relative group"
+                className="p-2.5 rounded-full border border-gray-200/70 bg-white/50 hover:bg-white transition-all duration-300 shadow-sm relative group"
               >
-                <Bell size={18} className="text-gray-600 dark:text-gray-300 group-hover:text-indigo-600 transition-colors" />
-                {notificationsEnabled && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-[#0B1221] animate-pulse"></span>}
+                <Bell size={18} className="text-gray-600 group-hover:text-indigo-600 transition-colors" />
+                {notificationsEnabled && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>}
               </button>
 
               {notificationOpen && (
-                <div className="absolute top-[calc(100%+12px)] right-0 w-72 bg-white dark:bg-[#0B1221] border border-gray-100 dark:border-white/10 rounded-2xl shadow-xl z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-4 py-3 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 flex justify-between items-center">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">Notifications</p>
+                <div className="absolute top-[calc(100%+12px)] right-0 w-72 bg-white border border-gray-100 rounded-2xl shadow-xl z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                  <div className="px-4 py-3 border-b border-gray-100 bg-slate-50 flex justify-between items-center">
+                    <p className="text-sm font-bold text-slate-900">Notifications</p>
                   </div>
                   <div className="p-5 flex flex-col items-center text-center space-y-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${notificationsEnabled ? 'bg-indigo-50 border-indigo-100 dark:bg-indigo-500/10 dark:border-indigo-500/20' : 'bg-gray-50 border-gray-100 dark:bg-white/5 dark:border-white/10'}`}>
-                      <Bell size={24} className={notificationsEnabled ? 'text-indigo-500' : 'text-gray-400'} />
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${notificationsEnabled ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100'}`}>
+                      <Bell size={24} className={notificationsEnabled ? 'text-indigo-500' : 'text-slate-400'} />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-gray-800 dark:text-gray-200">Stay Updated</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                      <h4 className="text-sm font-bold text-slate-800">Stay Updated</h4>
+                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                         Get real-time intelligence alerts for major legal rulings and community insights.
                       </p>
                     </div>
                     <button
                       onClick={toggleNotifications}
                       className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all border ${notificationsEnabled
-                        ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100 dark:bg-red-500/10 dark:border-red-500/20 dark:text-red-400'
+                        ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100'
                         : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20'
                         }`}
                     >
@@ -233,7 +235,7 @@ export default function Navbar() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search cases..."
-                className="w-full bg-gray-100/80 border border-gray-200/50 rounded-full pl-9 pr-4 py-1.5 text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
+                className="w-full bg-slate-50 border border-gray-200/50 rounded-full pl-9 pr-4 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
               />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
                 🔎
@@ -267,26 +269,27 @@ export default function Navbar() {
               )}
             </div>
 
+
             {user ? (
               <div className="relative" ref={userDropdownRef}>
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="group flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full border border-gray-200/70 dark:border-white/10 bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-white/10 transition-all duration-300 shadow-sm"
+                  className="group flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full border border-gray-200/70 bg-white/50 hover:bg-white transition-all duration-300 shadow-sm"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-inner font-bold text-sm flex-shrink-0">
                     {user.displayName ? user.displayName[0].toUpperCase() : (user.email ? user.email[0].toUpperCase() : "?")}
                   </div>
-                  <span className="max-w-0 overflow-hidden text-sm font-semibold text-gray-800 dark:text-gray-200 group-hover:max-w-[120px] transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] whitespace-nowrap">
+                  <span className="max-w-0 overflow-hidden text-sm font-semibold text-gray-800 group-hover:max-w-[120px] transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] whitespace-nowrap">
                     {user.displayName || user.email?.split('@')[0]}
                   </span>
-                  <ChevronDown size={14} className="text-gray-500 dark:text-gray-400 group-hover:text-indigo-500 transition-colors" />
+                  <ChevronDown size={14} className="text-gray-500 group-hover:text-indigo-500 transition-colors" />
                 </button>
 
                 {userDropdownOpen && (
                   <div className="absolute top-[calc(100%+8px)] right-0 w-56 bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{user.displayName || user.email}</p>
-                      <p className="text-xs text-indigo-600 font-medium">{user.photoURL || "Law Student / Explorer"}</p>
+                    <div className="px-4 py-3 border-b border-gray-100 bg-slate-50">
+                      <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || user.email}</p>
+                      <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">{user.photoURL || "Researcher"}</p>
                     </div>
                     <div className="p-2 space-y-1">
                       <Link href="/profile" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
@@ -357,9 +360,9 @@ export default function Navbar() {
             <div className="flex flex-col items-start gap-2 text-base font-medium px-4 pt-4">
               {user && (
                 <>
-                  <div className="px-4 py-3 mb-2 w-full bg-gray-50 rounded-xl border border-gray-100">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{user.displayName || user.email}</p>
-                    <p className="text-xs text-indigo-600 font-medium">{user.photoURL || "Law Student / Explorer"}</p>
+                  <div className="px-4 py-3 mb-2 w-full bg-slate-50 rounded-xl border border-gray-100">
+                    <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || user.email}</p>
+                    <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">{user.photoURL || "Researcher"}</p>
                   </div>
 
                   <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
@@ -377,32 +380,33 @@ export default function Navbar() {
                   <Link href="/bookmarks" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
                     <BookmarkIcon size={18} className="text-indigo-500" /> Saved Cases
                   </Link>
-                  <button onClick={toggleNotifications} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
-                    <Bell size={18} className="text-indigo-500" />
-                    <span className="flex-1 text-left">Push Notifications</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${notificationsEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
-                      {notificationsEnabled ? 'ON' : 'OFF'}
-                    </span>
-                  </button>
                 </>
               )}
+              {!user && (
+                <button 
+                  onClick={() => { setAuthOpen(true); setMenuOpen(false); }}
+                  className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2"
+                >
+                  <User size={18} className="text-indigo-500" /> Researcher Login
+                </button>
+              )}
+              <button onClick={toggleNotifications} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
+                <Bell size={18} className="text-indigo-500" />
+                <span className="flex-1 text-left">Push Notifications</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${notificationsEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
+                  {notificationsEnabled ? 'ON' : 'OFF'}
+                </span>
+              </button>
             </div>
 
-            {/* Auth Section */}
-            <div className="mt-6 mb-4 px-4 flex justify-center">
-              {user ? (
+            {/* Auth Section - Only show logout when logged in */}
+            <div className="mt-4 mb-4 px-4 flex justify-center">
+              {user && (
                 <button
                   onClick={handleLogout}
                   className="w-full px-8 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition font-medium flex justify-center items-center gap-2"
                 >
                   <LogOut size={18} /> Logout
-                </button>
-              ) : (
-                <button
-                  onClick={() => { setAuthOpen(true); setMenuOpen(false); }}
-                  className="w-full px-8 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:opacity-90 transition font-medium shadow-md flex justify-center items-center gap-2"
-                >
-                  <User size={18} /> Researcher Login
                 </button>
               )}
             </div>

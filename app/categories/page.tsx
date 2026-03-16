@@ -99,28 +99,28 @@ export default function CategoriesPage() {
   );
 
   return (
-    <div className="bg-[#030712] min-h-screen pt-32 pb-20">
+    <div className="bg-slate-50 min-h-screen pt-32 pb-20">
 
       {/* Header Section */}
       <section className="relative z-10 max-w-6xl mx-auto px-6 mb-16 text-center">
-        <h1 className="text-4xl md:text-6xl font-black text-white mb-6 tracking-tight">
+        <h1 className="text-4xl md:text-6xl font-black text-slate-900 mb-6 tracking-tight">
           Legal Directory
         </h1>
-        <p className="text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
+        <p className="text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed font-medium">
           Navigate through our structured legal domains. Use the search to find specific topics or explore the comprehensive category cards below.
         </p>
 
         {/* Search Bar */}
         <div className="max-w-2xl mx-auto mt-12 relative">
           <div className="absolute inset-y-0 left-5 flex items-center pointer-events-none">
-            <Search className="text-gray-500" size={20} />
+            <Search className="text-slate-400" size={20} />
           </div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Find a domain or topic (e.g. 'Article 21', 'IBC', 'Bail')..."
-            className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-2xl shadow-indigo-500/5"
+            className="w-full bg-white border border-gray-200 rounded-2xl py-4 pl-14 pr-6 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all shadow-xl shadow-indigo-500/5"
           />
         </div>
       </section>
@@ -131,23 +131,23 @@ export default function CategoriesPage() {
           {filteredCategories.map((cat) => (
             <div
               key={cat.id}
-              className={`group bg-gradient-to-br ${cat.color} border border-white/10 p-8 rounded-[2.5rem] hover:border-indigo-500/30 transition-all duration-500 relative overflow-hidden`}
+              className={`group bg-white border border-gray-200 p-8 rounded-[2.5rem] hover:border-indigo-500/30 transition-all duration-500 relative overflow-hidden shadow-sm`}
             >
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-6">
-                  <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
+                  <div className="w-14 h-14 bg-slate-50 border border-gray-100 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-500">
                     {cat.icon}
                   </div>
                   <Link
                     href={`/?category=${encodeURIComponent(cat.name)}`}
-                    className="flex items-center gap-2 text-sm font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
+                    className="flex items-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
                   >
                     Explore Updates <ArrowRight size={16} />
                   </Link>
                 </div>
 
-                <h3 className="text-2xl font-bold text-white mb-4">{cat.name}</h3>
-                <p className="text-gray-400 text-sm leading-relaxed mb-6">
+                <h3 className="text-2xl font-bold text-slate-900 mb-4">{cat.name}</h3>
+                <p className="text-slate-600 text-sm leading-relaxed mb-6 font-medium">
                   {cat.description}
                 </p>
 
@@ -156,7 +156,7 @@ export default function CategoriesPage() {
                     <Link
                       key={i}
                       href={`/?search=${encodeURIComponent(topic)}`}
-                      className="px-3 py-1 rounded-lg bg-white/5 border border-white/5 text-[10px] font-bold text-gray-500 uppercase tracking-wider hover:bg-white/10 hover:text-white transition-all"
+                      className="px-3 py-1 rounded-lg bg-slate-50 border border-gray-200 text-[10px] font-bold text-slate-500 uppercase tracking-wider hover:bg-slate-100 hover:text-indigo-600 transition-all"
                     >
                       {topic}
                     </Link>
@@ -171,10 +171,10 @@ export default function CategoriesPage() {
 
           {filteredCategories.length === 0 && (
             <div className="col-span-full py-20 text-center">
-              <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-white/5 text-gray-600">
+              <div className="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 text-slate-400">
                 <Search size={32} />
               </div>
-              <p className="text-gray-500">No categories found matching your search. Try different keywords.</p>
+              <p className="text-slate-500 font-medium">No categories found matching your search. Try different keywords.</p>
             </div>
           )}
         </div>
@@ -182,14 +182,14 @@ export default function CategoriesPage() {
 
       {/* Personalization CTA */}
       <section className="max-w-4xl mx-auto px-6 mt-32">
-        <div className="bg-indigo-600 dark:bg-indigo-900/40 rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden">
+        <div className="bg-indigo-600 rounded-[2.5rem] p-10 md:p-16 text-center relative overflow-hidden shadow-2xl shadow-indigo-600/20">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-r from-purple-500/20 to-transparent pointer-events-none"></div>
 
           <div className="relative z-10">
             <h2 className="text-3xl md:text-5xl font-black text-white mb-6">
               Missing Your Specific Niche?
             </h2>
-            <p className="text-indigo-100/70 text-lg mb-10 max-w-xl mx-auto">
+            <p className="text-indigo-100 text-lg mb-10 max-w-xl mx-auto font-medium">
               Our AI curators are indexing new legal domains every hour. Personalize your feed to get exactly what you need.
             </p>
             <Link
