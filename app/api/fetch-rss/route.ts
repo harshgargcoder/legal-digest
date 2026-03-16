@@ -68,6 +68,8 @@ const globalFeeds = [
   { url: "https://www.jurist.org/news/feed/", category: "Global", region: "International" },
 ];
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     let totalInserted = 0;
@@ -87,7 +89,9 @@ export async function GET() {
 
     for (const feed of allFeeds) {
       try {
-        const rss = await parser.parseURL(feed.url);
+        // Append timestamp to bypass caching at the source
+        const cacheBusterUrl = feed.url + (feed.url.includes("?") ? "&" : "?") + `t=${Date.now()}`;
+        const rss = await parser.parseURL(cacheBusterUrl);
 
         let insertedForFeed = 0;
 

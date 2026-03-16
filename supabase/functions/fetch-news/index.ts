@@ -83,7 +83,8 @@ serve(async () => {
 
   for (const feed of allFeeds) {
     try {
-      const response = await fetch(feed.url + `?t=${Date.now()}`, {
+      const cacheBusterUrl = feed.url + (feed.url.includes("?") ? "&" : "?") + `t=${Date.now()}`;
+      const response = await fetch(cacheBusterUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0",
           "Cache-Control": "no-cache",
