@@ -40,6 +40,7 @@ body {
   }
 }
 
+/*  */
 .animate-gradient {
   animation: gradientMove 6s ease infinite;
 }
