@@ -28,12 +28,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Message is required" }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-
     // Ensure history alternates correctly. 
-    // The SupportBot sends the initial greeting as the first message, which is 'bot' (model).
-    // Our startChat history already has [user: SYSTEM_PROMPT, model: "Understood..."].
-    // So the next message MUST be 'user'. We should skip the initial bot greeting.
     const cleanHistory = (history || [])
       .filter((h: any, i: number) => !(i === 0 && h.role !== "user"))
       .map((h: any) => ({
@@ -41,17 +36,43 @@ export async function POST(req: Request) {
         parts: [{ text: h.content }],
       }));
 
-    const chat = model.startChat({
-      history: [
-        { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
-        { role: "model", parts: [{ text: "Understood. I am the Legal Digest Support Bot. I will strictly stick to platform-related queries and assist users with Legal Digest features." }] },
-        ...cleanHistory,
-      ],
-    });
+    const modelsToTry = [
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
+      "gemini-2.5-pro",
+      "gemini-3.1-flash",
+      "gemini-3.1-pro",
+      "gemini-1.5-flash",
+      "gemini-2.0-flash"
+    ];
 
-    const result = await chat.sendMessage(message);
-    const response = await result.response;
-    const text = response.text();
+    let text = "";
+    let lastError = "";
+
+    for (const modelName of modelsToTry) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const chat = model.startChat({
+          history: [
+            { role: "user", parts: [{ text: SYSTEM_PROMPT }] },
+            { role: "model", parts: [{ text: "Understood. I am the Legal Digest Support Bot. I will strictly stick to platform-related queries and assist users with Legal Digest features." }] },
+            ...cleanHistory,
+          ],
+        });
+
+        const result = await chat.sendMessage(message);
+        const response = await result.response;
+        text = response.text();
+        if (text) break;
+      } catch (err: any) {
+        console.warn(`Support Model ${modelName} failed:`, err.message);
+        lastError = err.message;
+      }
+    }
+
+    if (!text) {
+      throw new Error(`All support bot models failed. Last error: ${lastError}`);
+    }
 
     return NextResponse.json({ text });
   } catch (error: any) {

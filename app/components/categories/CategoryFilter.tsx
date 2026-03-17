@@ -25,7 +25,7 @@ export default function CategoryFilter({
   setCategory,
 }: Props) {
   return (
-    <div className="flex gap-3 mb-8 overflow-x-auto no-scrollbar">
+    <div className="flex gap-3 mb-8 overflow-x-auto thin-scrollbar pb-2">
       {categories.map((cat) => {
         const Icon = cat.icon;
         return (

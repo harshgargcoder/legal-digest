@@ -9,9 +9,10 @@ interface Props {
   item: any;
   index: number;
   activeCategory?: string;
+  isFeatured?: boolean;
 }
 
-export default function NewsCard({ item, index }: Props) {
+export default function NewsCard({ item, index, isFeatured }: Props) {
   const [aiSummary, setAiSummary] = useState(item.ai_summary || "");
   const [tags, setTags] = useState<string[]>(item.tags || []);
   const [precedents, setPrecedents] = useState<string[]>(item.precedents || []);
@@ -86,23 +87,21 @@ export default function NewsCard({ item, index }: Props) {
   return (
     <div
       className={`
-      group relative overflow-hidden rounded-xl p-3 sm:p-5
-      transition-all duration-500 border cursor-pointer
-      hover:-translate-y-1 hover:scale-[1.01]
-      ${isTopThree
-          ? `
-      bg-white border-gray-200 shadow-sm
-      hover:shadow-xl hover:shadow-indigo-500/10
-      hover:border-indigo-400/60
-      `
-          : `
-      bg-white border-gray-100 shadow-sm
-      hover:shadow-xl hover:shadow-indigo-500/10
-      hover:border-indigo-300/50
-        `
-        }
+      group relative overflow-hidden transition-all duration-500 border cursor-pointer
+      hover:-translate-y-1 hover:scale-[1.005]
+      ${isFeatured 
+        ? "p-8 sm:p-10 rounded-[2rem] bg-white border-gray-200 shadow-xl hover:border-indigo-400/60 hover:shadow-indigo-500/10"
+        : `rounded-xl p-3 sm:p-5 ${isTopThree ? "bg-white border-gray-200 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-400/60" : "bg-white border-gray-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-300/50"}`
+      }
     `}
     >
+      {/* Background Glow for Featured/Top Items */}
+      {isFeatured && (
+        <>
+          <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-indigo-500/5 to-transparent opacity-50 pointer-events-none mix-blend-screen"></div>
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-purple-600/20 transition-colors duration-1000"></div>
+        </>
+      )}
       {/* Shimmer sweep on hover */}
       <div className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-20" />
 
@@ -116,13 +115,18 @@ export default function NewsCard({ item, index }: Props) {
       {/* Header Section */}
       <div className="flex justify-between items-start gap-2 mb-2 relative z-10">
         <div className="flex flex-col items-start gap-1">
-          {/* Top 3 Badge */}
-          {isTopThree && (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[8px] sm:text-[9px] font-bold tracking-wider uppercase shadow-md shadow-indigo-500/20">
+          {/* Top Story / Trending Badge */}
+          {isFeatured ? (
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase bg-indigo-600 text-white border border-indigo-700 mb-4 backdrop-blur-md shadow-lg shadow-indigo-600/20 relative z-10">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-200 animate-pulse"></span>
+              Top Story
+            </span>
+          ) : isTopThree && (
+            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[8px] sm:text-[9px] font-bold tracking-wider uppercase shadow-md shadow-indigo-500/20 mb-1">
               <span className="text-[9px] sm:text-[10px]">🔥</span> Trending {index + 1}
             </span>
           )}
-          <h2 className="text-base sm:text-xl font-bold leading-tight text-slate-900 group-hover:text-indigo-600 transition-colors duration-300">
+          <h2 className={`${isFeatured ? "text-2xl sm:text-4xl" : "text-base sm:text-xl"} font-bold leading-tight text-slate-900 group-hover:text-indigo-600 transition-colors duration-300`}>
             {item.title || "Untitled Legal Event"}
           </h2>
         </div>
@@ -146,29 +150,49 @@ export default function NewsCard({ item, index }: Props) {
 
       {/* Main Content */}
       <div className="relative z-10 space-y-3">
-        <p className="leading-relaxed text-[13px] sm:text-sm text-slate-600 line-clamp-2 group-hover:line-clamp-none transition-all duration-500">
+        <p className={`leading-relaxed text-slate-600 ${isFeatured ? "text-base sm:text-lg max-w-3xl" : "text-[13px] sm:text-sm line-clamp-2 group-hover:line-clamp-none"} transition-all duration-500`}>
           {item.summary || "No full summary provided for this event. Click below to analyze."}
         </p>
 
-        {/* AI Action Area */}
-        {!aiSummary && !loading && (
-          <button
-            onClick={generateSummary}
-            disabled={loading}
-            className="group/btn flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-xs font-bold text-indigo-700 transition-all active:scale-95"
-          >
-            <Sparkles size={14} className="text-indigo-500 group-hover/btn:animate-pulse" />
-            Generate AI Case Brief
-          </button>
-        )}
+        {/* Actions Row */}
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center gap-3">
+            {!aiSummary && !loading && (
+              <button
+                onClick={(e) => { e.stopPropagation(); generateSummary(); }}
+                disabled={loading}
+                className="group/btn flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-[10px] font-bold text-indigo-700 transition-all active:scale-95"
+              >
+                <Sparkles size={12} className="text-indigo-500 group-hover/btn:rotate-12 transition-transform" />
+                Generate AI Case Brief
+              </button>
+            )}
 
-        {/* Loading State */}
-        {loading && (
-          <div className="flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/10 rounded-xl animate-pulse w-max">
-            <div className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
-            <span className="text-xs font-medium text-indigo-300">Analyzing legal context...</span>
+            {loading && (
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl animate-pulse">
+                <div className="w-3 h-3 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
+                <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Analyzing...</span>
+              </div>
+            )}
+            
+            {aiSummary && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl text-[10px] font-bold text-emerald-700 uppercase tracking-widest">
+                <Sparkles size={12} className="text-emerald-500" /> Brief Ready
+              </div>
+            )}
           </div>
-        )}
+
+          <a
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { e.stopPropagation(); logReadingActivity(); }}
+            className="group/link flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-slate-400 hover:text-indigo-600 transition-all duration-300"
+          >
+            Read Full Document
+            <ExternalLink size={12} className="transition-transform duration-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
+          </a>
+        </div>
 
         {/* AI Brief Box */}
         {aiSummary && (
@@ -244,19 +268,6 @@ export default function NewsCard({ item, index }: Props) {
 
       </div>
 
-      {/* Footer Link */}
-      <div className="mt-6 pt-5 border-t border-gray-100 flex justify-end relative z-10">
-        <a
-          href={item.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={logReadingActivity}
-          className="group/link flex items-center gap-2 text-sm font-bold text-slate-900 hover:text-indigo-600 transition-all duration-300 flex-shrink-0"
-        >
-          Read Full Document
-          <ExternalLink size={14} className="transition-transform duration-300 group-hover/link:translate-x-1 group-hover/link:-translate-y-1" />
-        </a>
-      </div>
 
     </div>
   );

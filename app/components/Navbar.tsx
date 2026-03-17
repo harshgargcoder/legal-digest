@@ -9,7 +9,7 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useSearch } from "@/app/context/SearchContext";
 import { useNotifications } from "@/app/context/NotificationContext";
-import { User, LogOut, LayoutDashboard, Bookmark as BookmarkIcon, ChevronDown, Users, Bell, Network, ExternalLink, X } from "lucide-react";
+import { User, LogOut, LayoutDashboard, Bookmark as BookmarkIcon, ChevronDown, Users, Bell, Network, ExternalLink, X, Boxes, ShieldCheck } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
@@ -31,6 +31,7 @@ export default function Navbar() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -55,8 +56,19 @@ export default function Navbar() {
   const notificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        try {
+          const res = await fetch(`/api/user-preferences?userId=${currentUser.uid}`);
+          const data = await res.json();
+          setIsAdmin(data.preferences?.role === "Admin");
+        } catch (err) {
+          console.error("Error fetching role for navbar:", err);
+        }
+      } else {
+        setIsAdmin(false);
+      }
     });
 
     return () => unsubscribe();
@@ -158,6 +170,10 @@ export default function Navbar() {
 
             <Link href="/community" className="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition flex items-center gap-2">
               <Users size={16} /> Community
+            </Link>
+
+            <Link href="/toolkit" className="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition flex items-center gap-2">
+              <Boxes size={16} /> Toolkit
             </Link>
 
             {/* Notifications */}
@@ -329,7 +345,7 @@ export default function Navbar() {
                   <div className="absolute top-[calc(100%+8px)] right-0 w-56 bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                     <div className="px-4 py-3 border-b border-gray-100 bg-slate-50">
                       <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || user.email}</p>
-                      <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">{user.photoURL || "Researcher"}</p>
+                      <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">{isAdmin ? "Admin" : (user.photoURL || "Researcher")}</p>
                     </div>
                     <div className="p-2 space-y-1">
                       <Link href="/profile" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
@@ -341,6 +357,11 @@ export default function Navbar() {
                       <Link href="/bookmarks" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
                         <BookmarkIcon size={16} className="text-indigo-500" /> My Saved Cases
                       </Link>
+                      {isAdmin && (
+                        <Link href="/admin" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-indigo-700 hover:bg-indigo-50 rounded-xl transition font-bold border-t border-indigo-50">
+                          <ShieldCheck size={16} className="text-indigo-600" /> Admin Panel
+                        </Link>
+                      )}
                     </div>
                     <div className="p-2 border-t border-gray-100">
                       <button
@@ -421,6 +442,9 @@ export default function Navbar() {
                   </Link>
                   <Link href="/community" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
                     <Users size={18} className="text-indigo-500" /> Community Blog
+                  </Link>
+                  <Link href="/toolkit" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
+                    <Boxes size={18} className="text-indigo-500" /> Student Toolkit
                   </Link>
                   <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
                     <LayoutDashboard size={18} className="text-indigo-500" /> Dashboard

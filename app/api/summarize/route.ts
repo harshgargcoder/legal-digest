@@ -7,6 +7,8 @@ const supabase = createClient(
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+
 export async function GET() {
     try {
         const { data, error } = await supabase
@@ -76,12 +78,6 @@ export async function POST(req: NextRequest) {
             throw new Error("Missing GEMINI_API_KEY");
         }
 
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-        const model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash",
-        });
-
         // Ensure we don't send purely empty/null strings to the AI, or it talks about missing content.
         const safeTitle = title || "Untitled";
         const safeDesc = description || "No detailed description provided. Assume this is a breaking news headline or live event.";
@@ -109,8 +105,35 @@ export async function POST(req: NextRequest) {
         Content: ${safeDesc}
         `;
 
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
+        const modelsToTry = [
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-pro",
+            "gemini-3.1-flash",
+            "gemini-3.1-pro",
+            "gemini-1.5-flash",
+            "gemini-2.0-flash"
+        ];
+
+        let text = "";
+        let lastError = "";
+
+        for (const modelName of modelsToTry) {
+            try {
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent(prompt);
+                text = result.response.text();
+                if (text) break;
+            } catch (err: any) {
+                console.warn(`Summarize Model ${modelName} failed:`, err.message);
+                lastError = err.message;
+            }
+        }
+
+        if (!text) {
+            throw new Error(`All summarization models failed. Last error: ${lastError}`);
+        }
+
         const lines = text.split("\n").map((l) => l.trim());
 
         let summary = "";

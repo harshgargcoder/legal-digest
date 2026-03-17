@@ -90,7 +90,7 @@ export default function TrendingSidebar({ setSearch }: Props) {
           {loading && (
             <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl animate-pulse">
               <div className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></div>
-              <span className="text-sm font-medium text-indigo-600">Decrypting trends...</span>
+              <span className="text-sm font-medium text-indigo-600">Loading trends...</span>
             </div>
           )}
 

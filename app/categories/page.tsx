@@ -41,10 +41,10 @@ const CATEGORIES = [
   },
   {
     id: "corporate",
-    name: "Corporate & Finance",
+    name: "Finance",
     icon: <Briefcase className="text-emerald-400" size={24} />,
     description: "Company Law updates, IBC proceedings, SEBI regulations, and commercial arbitration.",
-    topics: ["IBC", "M&A", "SEBI", "Taxation", "Banking & Insurance"],
+    topics: ["IBC", "SEBI", "Debt Cases", "Profit/Loss", "Stay Proceedings", "Judgement", "NCLT hearings"],
     color: "from-emerald-500/10 to-teal-500/10"
   },
   {

@@ -73,6 +73,32 @@ const constitutionalRegex = buildRegex([
   "basic structure doctrine",
 ]);
 
+const financeRegex = buildRegex([
+  "debt",
+  "profit",
+  "loss",
+  "insolvency",
+  "bankruptcy",
+  "nclt",
+  "nclat",
+  "sebi",
+  "rbi",
+  "company act",
+  "corporate law",
+  "shareholder",
+  "merger",
+  "acquisition",
+  "liquidation",
+  "stay proceedings",
+  "corporate hearing",
+  "financial dispute",
+  "monetary claim",
+  "gst",
+  "income tax",
+  "customs duty",
+  "dividend",
+]);
+
 const indiaLegalRegex = buildRegex([
   "supreme court of india",
   "delhi high court",
@@ -101,6 +127,10 @@ export function detectCategories(
 
   if (highCourtRegex.test(normalized)) {
     categorySet.add("High Court");
+  }
+
+  if (financeRegex.test(normalized)) {
+    categorySet.add("Finance");
   }
 
   if (feedCategory) {

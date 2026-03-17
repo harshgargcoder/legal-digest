@@ -12,7 +12,7 @@ const NATIONAL_ONLY_CATEGORIES = [
 ];
 
 // Categories with 50/50 National vs International split
-const MIXED_CATEGORIES = ["Finance", "Corporate & Finance", "Sports"];
+const MIXED_CATEGORIES = ["Finance", "Sports"];
 
 // Categories that show only International news
 const INTERNATIONAL_ONLY_CATEGORIES = ["Global"];
@@ -82,8 +82,8 @@ export async function GET(request: Request) {
       const buildMixedQuery = (regionFilter: string) => {
         let q = supabase.from("legal_news").select("*", { count: "exact" });
         
-        if (categoryStr === "Finance" || categoryStr === "Corporate & Finance") {
-          q = q.in("category", ["Finance", "Corporate & Finance"]);
+        if (categoryStr === "Finance") {
+          q = q.or('category.ilike."Corporate & Finance",category.ilike.Finance');
         } else {
           q = q.ilike("category", categoryStr.trim());
         }
@@ -140,7 +140,7 @@ export async function GET(request: Request) {
       .select("*", { count: "exact" });
 
     if (category && category !== "All") {
-      if (category === "Corporate & Finance") {
+      if (category === "Finance") {
         query = query.or('category.ilike."Corporate & Finance",category.ilike.Finance');
       } else {
         query = query.ilike("category", category.trim());

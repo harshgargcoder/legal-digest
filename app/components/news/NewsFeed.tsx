@@ -21,6 +21,25 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
   const [initialLoading, setInitialLoading] = useState(true);
   const [hasMore, setHasMore] = useState(true);
 
+  // Cache handling
+  const getCacheKey = () => `news_cache_${category}_${search}_${region}`;
+
+  useEffect(() => {
+    // Load from cache first for instant UI
+    const cached = localStorage.getItem(getCacheKey());
+    if (cached) {
+      try {
+        const { data, timestamp } = JSON.parse(cached);
+        // If cache is less than 1 hour old (matching cron), use it
+        const isFresh = Date.now() - timestamp < 3600000;
+        setArticles(data);
+        if (isFresh) setInitialLoading(false);
+      } catch (e) {
+        localStorage.removeItem(getCacheKey());
+      }
+    }
+  }, [category, search, region]);
+
   async function fetchNews(pageNumber = 1, reset = false) {
     if (loading && !reset) return;
 
@@ -51,10 +70,24 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
     const newArticles = data.articles || [];
 
     setArticles((prev) => {
-      if (reset) return newArticles;
-      const seen = new Set(prev.map((a: any) => a.id));
-      const uniqueNew = newArticles.filter((a: any) => !seen.has(a.id));
-      return [...prev, ...uniqueNew];
+      let finalArticles;
+      if (reset) {
+        finalArticles = newArticles;
+      } else {
+        const seen = new Set(prev.map((a: any) => a.id));
+        const uniqueNew = newArticles.filter((a: any) => !seen.has(a.id));
+        finalArticles = [...prev, ...uniqueNew];
+      }
+
+      // Update cache on first page load
+      if (pageNumber === 1 && finalArticles.length > 0) {
+        localStorage.setItem(getCacheKey(), JSON.stringify({
+          data: finalArticles,
+          timestamp: Date.now()
+        }));
+      }
+      
+      return finalArticles;
     });
 
     setHasMore(newArticles.length === 10);
@@ -85,11 +118,8 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
   // Show a single centered spinner while the first page of results is loading
   if (initialLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-4">
-        <span className="w-10 h-10 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin" />
-        <p className="text-sm text-gray-400 tracking-widest uppercase font-medium animate-pulse">
-          Decrypting Feed…
-        </p>
+      <div className="flex flex-col items-center justify-center py-24">
+        <span className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -97,52 +127,14 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
   return (
     <>
       {articles.length > 0 && (
-        <a 
-          href={articles[0].url} 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="block mb-10 group"
-        >
-          <div
-            className="
-            relative overflow-hidden p-8 sm:p-10 rounded-3xl transition-all duration-500
-            bg-white border border-gray-200 shadow-xl
-            hover:border-indigo-500/40 hover:shadow-indigo-500/10
-          "
-          >
-            {/* Background Map / Glow Decoration */}
-            <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-indigo-500/10 to-transparent opacity-50 pointer-events-none mix-blend-screen"></div>
-            <div className="absolute -top-32 -right-32 w-64 h-64 bg-indigo-600 rounded-full blur-[100px] opacity-20 pointer-events-none group-hover:bg-purple-600 transition-colors duration-1000"></div>
-
-            <div className="relative z-10 flex flex-col h-full justify-between">
-              <div>
-                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase bg-indigo-600 text-white border border-indigo-700 mb-6 backdrop-blur-md shadow-lg shadow-indigo-600/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-200 animate-pulse"></span>
-                  Top Story
-                </span>
-
-                <h2 className="text-2xl sm:text-4xl font-bold mt-2 text-gray-900 leading-tight group-hover:text-indigo-600 transition-colors duration-300">
-                  {articles[0].title}
-                </h2>
-
-                <p className="mt-5 text-base sm:text-lg text-gray-600 leading-relaxed max-w-2xl">
-                  {articles[0].summary}
-                </p>
-              </div>
-
-              <div className="mt-8 flex items-center justify-between border-t border-gray-100 pt-6">
-                <div className="flex items-center gap-4 text-xs font-medium text-gray-500">
-                  <span className="px-3 py-1 bg-gray-50 rounded-lg border border-gray-200 text-indigo-600">{articles[0].category}</span>
-                  <span>{new Date(articles[0].published_at).toLocaleDateString("en-IN", { month: "long", day: "numeric", year: "numeric" })}</span>
-                </div>
-                
-                <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-200 flex items-center justify-center group-hover:bg-indigo-600 group-hover:border-indigo-500 transition-colors duration-300 text-gray-400 hover:text-white">
-                  <ArrowUpRight size={18} className="group-hover:rotate-12 transition-transform duration-300" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </a>
+        <div className="mb-10">
+          <NewsCard
+            item={articles[0]}
+            index={0}
+            isFeatured={true}
+            activeCategory={category}
+          />
+        </div>
       )}
 
       <div className="grid gap-6 sm:gap-8">
@@ -168,9 +160,9 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
           "
           >
             {loading && (
-              <span className="w-4 h-4 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></span>
-             )}
-            {loading ? "Decrypting Feed..." : "Load Older Archives"}
+              <span className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></span>
+            )}
+            {loading ? "Loading..." : "Load Older Archives"}
           </button>
         </div>
       )}

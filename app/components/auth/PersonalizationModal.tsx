@@ -24,6 +24,7 @@ const categories = [
 
 const suggestedTopics = [
   "CJI", "SLP", "Bail", "BNS", "IPC", "NDPS", "SEBI", "IBC", "GST", "Income Tax",
+  "NCLT", "NCLAT", "Debt", "Bankruptcy", "Corporate Stay", "Judgement", "Hearing",
   "Divorce", "Custody", "Maintenance", "Succession", "Adoption",
   "Environment", "Human Rights", "Intellectual Property", "Cyber Law", "Data Privacy"
 ];
@@ -168,7 +169,7 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
               </div>
 
               {/* Topics Grid */}
-              <div className="flex flex-wrap gap-2 pt-2 max-h-48 overflow-y-auto no-scrollbar">
+              <div className="flex flex-wrap gap-2 pt-2 max-h-48 overflow-y-auto thin-scrollbar">
                 {suggestedTopics.map(topic => {
                   const isSelected = selectedTopics.includes(topic);
                   return (
