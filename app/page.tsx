@@ -1,5 +1,6 @@
 "use client";
 
+
 import { useEffect, useState } from "react";
 import { useSearch } from "@/app/context/SearchContext";
 import { auth } from "@/lib/firebase";
