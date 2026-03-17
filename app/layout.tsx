@@ -6,8 +6,8 @@ import Footer from "@/app/components/Footer";
 import Script from "next/script";
 import { Search } from "lucide-react";
 import { SearchProvider } from "./context/SearchContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import SupportBot from "@/app/components/SupportBot";
-import NotificationHub from "@/app/components/NotificationHub";
 
 const GA_ID = "G-Z6NGF984TS";
 
@@ -41,15 +41,16 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <SearchProvider>
-          <Navbar />
+          <NotificationProvider>
+            <Navbar />
 
-          <main className="min-h-screen">
-            {children}
-          </main>
+            <main className="min-h-screen">
+              {children}
+            </main>
 
-          <Footer />
-          <NotificationHub />
-          <SupportBot />
+            <Footer />
+            <SupportBot />
+          </NotificationProvider>
 
           {/* Google Analytics */}
           <Script

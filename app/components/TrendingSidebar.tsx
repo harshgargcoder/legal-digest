@@ -66,7 +66,7 @@ export default function TrendingSidebar({ setSearch }: Props) {
     "Supreme Court",
     "High Court",
     "Constitutional",
-    "Corporate & Finance",
+    "Finance",
     "Sports"
   ];
 

@@ -12,7 +12,7 @@ const categories = [
   { name: "Supreme Court", icon: Landmark },
   { name: "High Court", icon: Scale },
   { name: "Constitutional", icon: BookOpen },
-  { name: "Corporate & Finance", icon: Building2 },
+  { name: "Finance", icon: Building2 },
   { name: "Criminal", icon: Gavel },
   { name: "Family", icon: Users },
   { name: "General", icon: Activity },

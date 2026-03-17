@@ -73,7 +73,7 @@ serve(async () => {
       category: "Finance",
     },
     { url: "https://feeds.bbci.co.uk/sport/rss.xml", category: "Sports" },
-    {url: "https://www.espn.com/espn/rss/news", category: "Sports" },
+    { url: "https://www.espn.com/espn/rss/news", category: "Sports" },
     { url: "https://feeds.bbci.co.uk/news/rss.xml", category: "Global" },
     { url: "https://feeds.bbci.co.uk/news/world/rss.xml", category: "Global" },
     { url: "https://www.aljazeera.com/xml/rss/all.xml", category: "Global" },
@@ -83,7 +83,8 @@ serve(async () => {
 
   for (const feed of allFeeds) {
     try {
-      const cacheBusterUrl = feed.url + (feed.url.includes("?") ? "&" : "?") + `t=${Date.now()}`;
+      const cacheBusterUrl = feed.url + (feed.url.includes("?") ? "&" : "?") +
+        `t=${Date.now()}`;
       const response = await fetch(cacheBusterUrl, {
         headers: {
           "User-Agent": "Mozilla/5.0",

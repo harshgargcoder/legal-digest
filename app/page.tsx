@@ -33,7 +33,7 @@ function HomeContent() {
     if (searchParam && searchParam !== search) {
       setSearch(searchParam);
     }
-  }, [searchParams, setSearch, category, search]);
+  }, [searchParams, setSearch]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {

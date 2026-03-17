@@ -8,12 +8,21 @@ import AuthModal from "./auth/AuthModal";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useSearch } from "@/app/context/SearchContext";
-import { User, LogOut, LayoutDashboard, Bookmark as BookmarkIcon, ChevronDown, Users, Bell, Network } from "lucide-react";
+import { useNotifications } from "@/app/context/NotificationContext";
+import { User, LogOut, LayoutDashboard, Bookmark as BookmarkIcon, ChevronDown, Users, Bell, Network, ExternalLink, X } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { search, setSearch } = useSearch();
+  const { 
+    notifications, 
+    unreadCount, 
+    loading: notificationsLoading, 
+    markAllAsRead,
+    notificationsEnabled,
+    toggleNotifications
+  } = useNotifications();
   const [mounted, setMounted] = useState(false);
 
   const [authOpen, setAuthOpen] = useState(false);
@@ -21,26 +30,19 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    setNotificationsEnabled(localStorage.getItem("notifications") === "true");
   }, []);
 
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
-    const handleStorageChange = () => {
-      setNotificationsEnabled(localStorage.getItem("notifications") === "true");
-    };
     window.addEventListener("scroll", handleScroll);
-    window.addEventListener("storage", handleStorageChange);
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
@@ -119,37 +121,6 @@ export default function Navbar() {
     router.refresh();
   };
 
-  const toggleNotifications = async () => {
-    if (!notificationsEnabled) {
-      if (typeof window !== "undefined" && "Notification" in window) {
-        if (Notification.permission === "granted") {
-          setNotificationsEnabled(true);
-          localStorage.setItem("notifications", "true");
-        } else {
-          try {
-            const permission = await Notification.requestPermission();
-            if (permission === "granted") {
-              setNotificationsEnabled(true);
-              localStorage.setItem("notifications", "true");
-            } else {
-              setNotificationsEnabled(false);
-              localStorage.setItem("notifications", "false");
-            }
-          } catch (e) {
-            setNotificationsEnabled(false);
-            localStorage.setItem("notifications", "false");
-          }
-        }
-      } else {
-        setNotificationsEnabled(true);
-        localStorage.setItem("notifications", "true");
-      }
-    } else {
-      setNotificationsEnabled(false);
-      localStorage.setItem("notifications", "false");
-    }
-  };
-
   return (
     <>
       <div className="fixed top-0 w-full z-[1000] px-4 pt-4 sm:pt-6 flex justify-center pointer-events-none">
@@ -192,38 +163,99 @@ export default function Navbar() {
             {/* Notifications */}
             <div className="relative" ref={notificationRef}>
               <button
-                onClick={() => setNotificationOpen(!notificationOpen)}
+                onClick={() => {
+                  setNotificationOpen(!notificationOpen);
+                  if (!notificationOpen) markAllAsRead();
+                }}
                 className="p-2.5 rounded-full border border-gray-200/70 bg-white/50 hover:bg-white transition-all duration-300 shadow-sm relative group"
               >
                 <Bell size={18} className="text-gray-600 group-hover:text-indigo-600 transition-colors" />
-                {notificationsEnabled && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white animate-pulse"></span>}
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] items-center justify-center text-white font-bold">
+                      {unreadCount}
+                    </span>
+                  </span>
+                )}
               </button>
 
               {notificationOpen && (
-                <div className="absolute top-[calc(100%+12px)] right-0 w-72 bg-white border border-gray-100 rounded-2xl shadow-xl z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                <div className="absolute top-[calc(100%+12px)] right-0 w-80 bg-white border border-gray-100 rounded-2xl shadow-xl z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                   <div className="px-4 py-3 border-b border-gray-100 bg-slate-50 flex justify-between items-center">
                     <p className="text-sm font-bold text-slate-900">Notifications</p>
-                  </div>
-                  <div className="p-5 flex flex-col items-center text-center space-y-4">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center border ${notificationsEnabled ? 'bg-indigo-50 border-indigo-100' : 'bg-slate-50 border-slate-100'}`}>
-                      <Bell size={24} className={notificationsEnabled ? 'text-indigo-500' : 'text-slate-400'} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-800">Stay Updated</h4>
-                      <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                        Get real-time intelligence alerts for major legal rulings and community insights.
-                      </p>
-                    </div>
-                    <button
+                    <button 
                       onClick={toggleNotifications}
-                      className={`w-full py-2.5 rounded-xl text-xs font-semibold transition-all border ${notificationsEnabled
-                        ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100'
-                        : 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-600/20'
-                        }`}
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${notificationsEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}
                     >
-                      {notificationsEnabled ? "Disable Alerts" : "Enable Alerts"}
+                      {notificationsEnabled ? 'Push: ON' : 'Push: OFF'}
                     </button>
                   </div>
+                  
+                  <div className="max-h-[350px] overflow-y-auto">
+                    {notificationsLoading && notifications.length === 0 ? (
+                      <div className="p-8 flex flex-col items-center justify-center text-center space-y-3">
+                        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-xs text-slate-500">Fetching updates...</p>
+                      </div>
+                    ) : notifications.length > 0 ? (
+                      <div className="divide-y divide-gray-50">
+                        {notifications.map((notif: any) => (
+                          <div 
+                            key={notif.id} 
+                            onClick={() => {
+                              router.push(notif.url);
+                              setNotificationOpen(false);
+                            }}
+                            className="p-4 hover:bg-indigo-50/30 transition cursor-pointer group"
+                          >
+                            <div className="flex justify-between items-start mb-1">
+                              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{notif.source}</span>
+                              <span className="text-[10px] text-slate-400">{new Date(notif.published_at).toLocaleDateString()}</span>
+                            </div>
+                            <h4 className="text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-indigo-600 transition-colors">
+                              {notif.title}
+                            </h4>
+                            <div className="flex items-center mt-2 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-[10px] font-bold">Read details</span>
+                              <ExternalLink size={10} className="ml-1" />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-10 flex flex-col items-center text-center space-y-4">
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border bg-slate-50 border-slate-100`}>
+                          <Bell size={24} className={'text-slate-400'} />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-800">No new updates</h4>
+                          <p className="text-xs text-slate-500 mt-1 leading-relaxed px-4">
+                            We'll notify you here once new legal rulings or insights are available.
+                          </p>
+                        </div>
+                        {!notificationsEnabled && (
+                          <button
+                            onClick={toggleNotifications}
+                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 py-1"
+                          >
+                            Enable push alerts
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {notifications.length > 0 && (
+                    <div className="p-2 border-t border-gray-50 bg-gray-50/50">
+                      <button 
+                        onClick={() => router.push('/dashboard')}
+                        className="w-full py-2 text-xs font-bold text-indigo-600 hover:bg-white rounded-lg transition"
+                      >
+                        View Dashboard
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -240,6 +272,14 @@ export default function Navbar() {
               <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
                 🔎
               </span>
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded-full transition-colors"
+                >
+                  <X size={14} className="text-gray-400" />
+                </button>
+              )}
 
               {search.trim() !== "" && (
                 <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-gray-200 rounded-2xl shadow-xl z-[1100] max-h-80 overflow-y-auto">
@@ -338,6 +378,14 @@ export default function Navbar() {
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm opacity-70">
                 🔎
               </span>
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded-full transition-colors"
+                >
+                  <X size={12} className="text-gray-400" />
+                </button>
+              )}
             </div>
 
             {/* Animated Hamburger */}
@@ -396,6 +444,7 @@ export default function Navbar() {
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${notificationsEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
                   {notificationsEnabled ? 'ON' : 'OFF'}
                 </span>
+                {unreadCount > 0 && <span className="w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold ml-2">{unreadCount}</span>}
               </button>
             </div>
 

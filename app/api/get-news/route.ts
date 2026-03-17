@@ -12,7 +12,7 @@ const NATIONAL_ONLY_CATEGORIES = [
 ];
 
 // Categories with 50/50 National vs International split
-const MIXED_CATEGORIES = ["Finance", "Sports"];
+const MIXED_CATEGORIES = ["Finance", "Corporate & Finance", "Sports"];
 
 // Categories that show only International news
 const INTERNATIONAL_ONLY_CATEGORIES = ["Global"];
@@ -81,7 +81,13 @@ export async function GET(request: Request) {
       const categoryStr = category as string;
       const buildMixedQuery = (regionFilter: string) => {
         let q = supabase.from("legal_news").select("*", { count: "exact" });
-        q = q.ilike("category", categoryStr.trim());
+        
+        if (categoryStr === "Finance" || categoryStr === "Corporate & Finance") {
+          q = q.in("category", ["Finance", "Corporate & Finance"]);
+        } else {
+          q = q.ilike("category", categoryStr.trim());
+        }
+        
         q = q.eq("region", regionFilter);
         q = q.order("published_at", { ascending: false }).order("id", { ascending: false });
         return q.range(0, half - 1);
@@ -134,9 +140,21 @@ export async function GET(request: Request) {
       .select("*", { count: "exact" });
 
     if (category && category !== "All") {
-      query = query.ilike("category", category.trim());
+      if (category === "Corporate & Finance") {
+        query = query.or('category.ilike."Corporate & Finance",category.ilike.Finance');
+      } else {
+        query = query.ilike("category", category.trim());
+      }
     } else if (categories && categories.length > 0 && !categories.includes("All")) {
-      query = query.in("category", categories);
+      // Handle multiple categories with potential "Finance" selection
+      if (categories.includes("Finance") || categories.includes("Corporate & Finance")) {
+        const modifiedCategories = [...categories];
+        if (!modifiedCategories.includes("Finance")) modifiedCategories.push("Finance");
+        if (!modifiedCategories.includes("Corporate & Finance")) modifiedCategories.push("Corporate & Finance");
+        query = query.in("category", modifiedCategories);
+      } else {
+        query = query.in("category", categories);
+      }
     }
 
     // Apply region constraint — support both old ('India'/'Global') and new ('National'/'International') values
