@@ -63,31 +63,33 @@ function getAdminApp() {
 
       // 4. Ultra-Aggressive Private Key Normalization (PEM format)
       if (config.private_key) {
-        let pKey = config.private_key;
+        try {
+          // Extract only the base64 characters by stripping out headers, footers, and ALL whitespace/newlines/escapes
+          const rawKey = config.private_key
+            .replace(/-----BEGIN PRIVATE KEY-----/g, "")
+            .replace(/-----END PRIVATE KEY-----/g, "")
+            .replace(/\\n/g, "")
+            .replace(/\\r/g, "")
+            .replace(/\s+/g, "") // Removes all spaces, actual newlines, tabs
+            .replace(/['"]/g, ""); // Remove any stray quotes
 
-        // Fix common escaping/mangling issues
-        pKey = pKey.replace(/\\n/g, "\n").replace(/\r\n/g, "\n");
-
-        // Split and clean every single line
-        const lines = pKey.split("\n")
-          .map((s: string) => s.trim())
-          .filter((s: string) => s.length > 0)
-          .map((s: string) => s.replace(/^['"]|['"]$/g, "").trim()); // Strip internal quotes per line
-
-        // Rebuild with proper headers/footers
-        const cleanedLines = lines.filter((l: string) =>
-          !l.includes("PRIVATE KEY")
-        );
-        const finalLines = [
-          "-----BEGIN PRIVATE KEY-----",
-          ...cleanedLines,
-          "-----END PRIVATE KEY-----",
-        ];
-
-        config.private_key = finalLines.join("\n") + "\n";
-        console.log(
-          `Firebase Admin: Private key successfully normalized. (Lines: ${finalLines.length})`,
-        );
+          // Standard PEM format wraps at 64 characters
+          const matched = rawKey.match(/.{1,64}/g);
+          if (matched && rawKey.length > 100) {
+            config.private_key = [
+              "-----BEGIN PRIVATE KEY-----",
+              ...matched,
+              "-----END PRIVATE KEY-----",
+            ].join("\n") + "\n";
+            console.log(
+              `Firebase Admin: Private key successfully reconstructed. (Raw payload length: ${rawKey.length})`,
+            );
+          } else {
+            console.error("Firebase Admin: Failed to extract valid base64 key material from string.");
+          }
+        } catch (err: any) {
+          console.error("Firebase Admin: Error during key reconstruction:", err.message);
+        }
       }
 
       // 5. Validation
