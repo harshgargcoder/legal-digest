@@ -61,9 +61,18 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ users: mergedUsers });
   } catch (err: unknown) {
-    const error = err as Error;
-    console.error("Admin Users GET Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const error = err as any;
+    console.error("Admin Users GET Error Details:", {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      details: error.details || error.response?.data
+    });
+    return NextResponse.json({ 
+      error: error.message, 
+      code: error.code || 'UNKNOWN_ERROR',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
 }
 
