@@ -73,6 +73,11 @@ function getAdminApp() {
             .replace(/\s+/g, "") // Removes all spaces, actual newlines, tabs
             .replace(/['"]/g, ""); // Remove any stray quotes
 
+          console.log(`Firebase Admin Diagnostics: Raw Base64 Length = ${rawKey.length}`);
+          if (rawKey.length > 20) {
+            console.log(`Firebase Admin Diagnostics: Base64 Source Ends With = ...${rawKey.slice(-10)}`);
+          }
+
           // Standard PEM format wraps at 64 characters
           const matched = rawKey.match(/.{1,64}/g);
           if (matched && rawKey.length > 100) {
@@ -82,7 +87,7 @@ function getAdminApp() {
               "-----END PRIVATE KEY-----",
             ].join("\n") + "\n";
             console.log(
-              `Firebase Admin: Private key successfully reconstructed. (Raw payload length: ${rawKey.length})`,
+              `Firebase Admin: Private key successfully reconstructed.`,
             );
           } else {
             console.error("Firebase Admin: Failed to extract valid base64 key material from string.");
