@@ -12,9 +12,23 @@ function getAdminApp() {
         throw new Error("FIREBASE_SERVICE_ACCOUNT_KEY is missing in environment variables.");
       }
 
-      const serviceAccount = JSON.parse(key);
+      let serviceAccount;
+      try {
+        serviceAccount = JSON.parse(key);
+      } catch (e) {
+        // Fallback for cases where the key might be wrapped in extra quotes by the environment loader
+        const cleanedKey = key.trim().replace(/^['"]|['"]$/g, '');
+        serviceAccount = JSON.parse(cleanedKey);
+      }
+
       if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, "\n");
+        // Robust replacement of literal \n and handling of already-real newlines
+        serviceAccount.private_key = serviceAccount.private_key
+          .replace(/\\n/g, '\n')
+          .split('\n')
+          .map((line: string) => line.trim())
+          .join('\n')
+          .trim();
       }
 
       adminApp = admin.initializeApp({
