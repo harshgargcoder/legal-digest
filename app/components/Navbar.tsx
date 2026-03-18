@@ -357,11 +357,6 @@ export default function Navbar() {
                       <Link href="/bookmarks" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
                         <BookmarkIcon size={16} className="text-indigo-500" /> My Saved Cases
                       </Link>
-                      {isAdmin && (
-                        <Link href="/admin" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-indigo-700 hover:bg-indigo-50 rounded-xl transition font-bold border-t border-indigo-50">
-                          <ShieldCheck size={16} className="text-indigo-600" /> Admin Panel
-                        </Link>
-                      )}
                     </div>
                     <div className="p-2 border-t border-gray-100">
                       <button
