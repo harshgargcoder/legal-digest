@@ -99,6 +99,45 @@ const financeRegex = buildRegex([
   "dividend",
 ]);
 
+const familyRegex = buildRegex([
+  "divorce",
+  "divorce petition",
+  "divorce settlement",
+  "alimony",
+  "spousal support",
+  "maintenance",
+  "child maintenance",
+  "separation",
+  "judicial separation",
+  "custody",
+  "child custody",
+  "visitation",
+  "visitation rights",
+  "adoption",
+  "guardianship",
+  "marital",
+  "matrimonial",
+  "settlement",
+  "annulment",
+  "bigamy",
+  "mutual consent divorce",
+  "restoration of conjugal rights",
+  "domestic violence",
+  "domestic abuse",
+  "child support",
+  "dowry",
+  "paternity",
+  "parentage",
+  "succession",
+  "inheritance",
+  "partition",
+  "streedhan",
+  "child marriage",
+  "guardians and wards",
+  "nri divorce",
+  "maintenance under section 125",
+]);
+
 const indiaLegalRegex = buildRegex([
   "supreme court of india",
   "delhi high court",
@@ -133,6 +172,10 @@ export function detectCategories(
     categorySet.add("Finance");
   }
 
+  if (familyRegex.test(normalized)) {
+    categorySet.add("Family");
+  }
+
   if (feedCategory) {
     categorySet.add(feedCategory);
   }
@@ -160,6 +203,10 @@ export function detectRegion(
 
   if (feedCategory === "Global") {
     return "Global";
+  }
+
+  if (feedCategory === "Criminal" || feedCategory === "Family") {
+    return "India";
   }
 
   if (

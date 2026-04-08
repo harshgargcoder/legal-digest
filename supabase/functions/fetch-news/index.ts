@@ -7,6 +7,8 @@ type Category =
   | "Constitutional"
   | "Supreme Court"
   | "High Court"
+  | "Criminal"
+  | "Family"
   | "Finance"
   | "Sports"
   | "General"
@@ -74,6 +76,66 @@ serve(async () => {
     },
     { url: "https://feeds.bbci.co.uk/sport/rss.xml", category: "Sports" },
     { url: "https://www.espn.com/espn/rss/news", category: "Sports" },
+    {
+      url:
+        "https://news.google.com/rss/search?q=criminal+law+India&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Criminal",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=bail+India+court&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Criminal",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=NDPS+India+court&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Criminal",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=family+law+India&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Family",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=divorce+custody+India+court&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Family",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=maintenance+adoption+India+court&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Family",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=divorce+alimony+maintenance+custody+India&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Family",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=domestic+violence+India+court&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Family",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=mutual+consent+divorce+India+court&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Family",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=alimony+maintenance+custody+divorce+petition+India&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Family",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=judicial+separation+annulment+India+court&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Family",
+    },
+    {
+      url:
+        "https://news.google.com/rss/search?q=inheritance+succession+partition+streedhan+India+court&hl=en-IN&gl=IN&ceid=IN:en",
+      category: "Family",
+    },
     { url: "https://feeds.bbci.co.uk/news/rss.xml", category: "Global" },
     { url: "https://feeds.bbci.co.uk/news/world/rss.xml", category: "Global" },
     { url: "https://www.aljazeera.com/xml/rss/all.xml", category: "Global" },

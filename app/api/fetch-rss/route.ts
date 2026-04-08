@@ -27,11 +27,23 @@ const constitutionalFeeds = [
 const criminalFeeds = [
   { url: "https://criminallawstudiesnluj.wordpress.com/feed", category: "Criminal", region: "National" },
   { url: "https://www.barandbench.com/stories.rss", category: "Criminal", region: "National" },
+  { url: "https://news.google.com/rss/search?q=criminal+law+India&hl=en-IN&gl=IN&ceid=IN:en", category: "Criminal", region: "National" },
+  { url: "https://news.google.com/rss/search?q=bail+India+court&hl=en-IN&gl=IN&ceid=IN:en", category: "Criminal", region: "National" },
+  { url: "https://news.google.com/rss/search?q=NDPS+India+court&hl=en-IN&gl=IN&ceid=IN:en", category: "Criminal", region: "National" },
 ];
 
 const familyFeeds = [
   { url: "https://lawctopus.com/feed", category: "Family", region: "National" },
   { url: "https://www.scconline.com/blog/feed/", category: "Family", region: "National" },
+  { url: "https://news.google.com/rss/search?q=family+law+India&hl=en-IN&gl=IN&ceid=IN:en", category: "Family", region: "National" },
+  { url: "https://news.google.com/rss/search?q=divorce+custody+India+court&hl=en-IN&gl=IN&ceid=IN:en", category: "Family", region: "National" },
+  { url: "https://news.google.com/rss/search?q=maintenance+adoption+India+court&hl=en-IN&gl=IN&ceid=IN:en", category: "Family", region: "National" },
+  { url: "https://news.google.com/rss/search?q=divorce+alimony+maintenance+custody+India&hl=en-IN&gl=IN&ceid=IN:en", category: "Family", region: "National" },
+  { url: "https://news.google.com/rss/search?q=domestic+violence+India+court&hl=en-IN&gl=IN&ceid=IN:en", category: "Family", region: "National" },
+  { url: "https://news.google.com/rss/search?q=mutual+consent+divorce+India+court&hl=en-IN&gl=IN&ceid=IN:en", category: "Family", region: "National" },
+  { url: "https://news.google.com/rss/search?q=alimony+maintenance+custody+divorce+petition+India&hl=en-IN&gl=IN&ceid=IN:en", category: "Family", region: "National" },
+  { url: "https://news.google.com/rss/search?q=judicial+separation+annulment+India+court&hl=en-IN&gl=IN&ceid=IN:en", category: "Family", region: "National" },
+  { url: "https://news.google.com/rss/search?q=inheritance+succession+partition+streedhan+India+court&hl=en-IN&gl=IN&ceid=IN:en", category: "Family", region: "National" },
 ];
 
 // ─── GENERAL FEEDS (National) ─────────────────────────────────────────────────
