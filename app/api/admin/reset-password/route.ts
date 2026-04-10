@@ -6,11 +6,24 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+function getBearerToken(req: Request) {
+  const header = req.headers.get("authorization");
+  if (!header || !header.startsWith("Bearer ")) return null;
+  return header.slice("Bearer ".length);
+}
+
 export async function POST(req: Request) {
   try {
-    const { adminId, targetUserId, email } = await req.json();
+    const token = getBearerToken(req);
+    if (!token) {
+      return NextResponse.json({ error: "Missing authorization token" }, { status: 401 });
+    }
 
-    if (!adminId || !targetUserId || !email) {
+    const adminAuth = getAdminAuth();
+    const decoded = await adminAuth.verifyIdToken(token);
+    const { targetUserId, email } = await req.json();
+
+    if (!targetUserId || !email) {
       return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
     }
 
@@ -18,7 +31,7 @@ export async function POST(req: Request) {
     const { data: adminPrefs } = await supabase
       .from("user_preferences")
       .select("role")
-      .eq("user_id", adminId)
+      .eq("user_id", decoded.uid)
       .single();
 
     if (adminPrefs?.role !== "Admin") {
@@ -26,7 +39,6 @@ export async function POST(req: Request) {
     }
 
     // Generate password reset link
-    const adminAuth = getAdminAuth();
     const link = await adminAuth.generatePasswordResetLink(email);
 
     return NextResponse.json({ success: true, link });

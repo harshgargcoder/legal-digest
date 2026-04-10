@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, User } from "firebase/auth";
 
 interface Notification {
   id: string;
@@ -10,6 +10,12 @@ interface Notification {
   published_at: string;
   url: string;
   source: string;
+}
+
+interface Preferences {
+  categories?: string[];
+  topics?: string[];
+  last_notified_at?: string;
 }
 
 interface NotificationContextType {
@@ -25,16 +31,29 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<any>(null);
-  const [preferences, setPreferences] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [preferences, setPreferences] = useState<Preferences | null>(null);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        try {
+          const token = await currentUser.getIdToken();
+          await fetch("/api/session/track", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+        } catch (err) {
+          console.error("Failed to track user session IP", err);
+        }
+      }
     });
     setNotificationsEnabled(localStorage.getItem("notifications") === "true");
     return () => unsubscribe();
@@ -76,11 +95,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         
         // Count how many are newer than last_notified_at
         const lastCheck = last_notified_at ? new Date(last_notified_at).getTime() : 0;
-        const newCount = data.articles.filter((a: any) => new Date(a.published_at).getTime() > lastCheck).length;
+        const newCount = data.articles.filter((a: Notification) => new Date(a.published_at).getTime() > lastCheck).length;
         setUnreadCount(newCount);
 
         // Check for browser notification
-        const newArticles = data.articles.filter((article: any) => {
+        const newArticles = data.articles.filter((article: Notification) => {
           const publishedAt = new Date(article.published_at).getTime();
           return publishedAt > lastCheck;
         });
@@ -124,7 +143,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       });
 
       setUnreadCount(0);
-      setPreferences((prev: any) => ({ ...prev, last_notified_at: latestTimestamp }));
+      setPreferences((prev) => ({ ...(prev ?? {}), last_notified_at: latestTimestamp }));
     } catch (err) {
       console.error("Failed to mark notifications as read", err);
     }
