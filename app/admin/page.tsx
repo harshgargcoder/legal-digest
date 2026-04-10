@@ -31,11 +31,14 @@ type AdminUser = {
   createdAt: string | null;
   lastActivityDate: string | null;
   ipAddress: string | null;
+  ipRiskLevel: "trusted" | "warning" | "critical" | "malicious" | string;
+  ipRiskReason: string | null;
   ipHistory: {
     ipAddress: string;
     seenAt: string;
     location: string;
-    status: "Trusted" | "Observed";
+    status: "Trusted" | "Warning" | "Critical" | "Malicious";
+    riskReason: string | null;
   }[];
 };
 
@@ -502,7 +505,24 @@ export default function AdminPage() {
                                   {formatDate(user.lastActivityDate) || formatDate(user.lastSignInTime)}
                                 </td>
                                 <td className="px-5 py-4 text-sm text-slate-600 font-mono">
-                                  {user.ipAddress ?? "Not tracked"}
+                                  <div className="flex items-center gap-2">
+                                    <span>{user.ipAddress ?? "Not tracked"}</span>
+                                    {user.ipRiskLevel === "malicious" && (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-700">
+                                        Malicious
+                                      </span>
+                                    )}
+                                    {user.ipRiskLevel === "critical" && (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-orange-100 text-orange-700">
+                                        Critical
+                                      </span>
+                                    )}
+                                    {user.ipRiskLevel === "warning" && (
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-100 text-amber-700">
+                                        Warning
+                                      </span>
+                                    )}
+                                  </div>
                                 </td>
                                 <td className="px-5 py-4">
                                   <span
@@ -689,9 +709,18 @@ function UserLogsPanel({
   ];
 
   const ipRows = user.ipHistory;
+  const highRiskCount = ipRows.filter(
+    (r) => r.status === "Critical" || r.status === "Malicious",
+  ).length;
 
   return (
     <div className="space-y-4">
+      {highRiskCount > 0 && (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
+          Security Warning: {highRiskCount} high-risk IP event(s) detected for this user.
+        </div>
+      )}
+
       <button
         onClick={onBackToList}
         className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-800"
@@ -777,8 +806,23 @@ function UserLogsPanel({
                     <p className="font-mono text-slate-700">{row.ipAddress}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(row.seenAt, true)}</p>
                   </div>
-                  <p className="text-slate-500">{row.location}</p>
-                  <span className={`px-2 py-0.5 rounded font-semibold ${row.status === "Observed" ? "bg-amber-100 text-amber-700" : "bg-indigo-100 text-indigo-700"}`}>
+                  <div>
+                    <p className="text-slate-500">{row.location}</p>
+                    {row.riskReason && row.status !== "Trusted" && (
+                      <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{row.riskReason}</p>
+                    )}
+                  </div>
+                  <span
+                    className={`px-2 py-0.5 rounded font-semibold ${
+                      row.status === "Malicious"
+                        ? "bg-rose-100 text-rose-700"
+                        : row.status === "Critical"
+                          ? "bg-orange-100 text-orange-700"
+                          : row.status === "Warning"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-indigo-100 text-indigo-700"
+                    }`}
+                  >
                     {row.status}
                   </span>
                 </div>

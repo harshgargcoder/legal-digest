@@ -25,7 +25,8 @@ type IpLogEntry = {
   ipAddress: string;
   seenAt: string;
   location: string;
-  status: "Trusted" | "Observed";
+  status: "Trusted" | "Warning" | "Critical" | "Malicious";
+  riskReason: string | null;
 };
 type IpLogRow = {
   user_id: string;
@@ -35,12 +36,27 @@ type IpLogRow = {
   region?: string | null;
   country?: string | null;
   country_code?: string | null;
+  risk_level?: string | null;
+  risk_reason?: string | null;
 };
 
 function getBearerToken(req: Request) {
   const header = req.headers.get("authorization");
   if (!header || !header.startsWith("Bearer ")) return null;
   return header.slice("Bearer ".length);
+}
+
+function getRequestIp(req: Request) {
+  const header = req.headers.get("x-forwarded-for");
+  if (header) return header.split(",")[0].trim().replace(/^::ffff:/, "");
+  return req.headers.get("x-real-ip")?.trim().replace(/^::ffff:/, "") ?? null;
+}
+
+function isHardBlockedIp(ipAddress: string | null) {
+  if (!ipAddress) return false;
+  const raw = `${process.env.MALICIOUS_IPS ?? ""},${process.env.BLOCKED_IPS ?? ""}`;
+  const set = new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
+  return set.has(ipAddress);
 }
 
 async function isSupabaseAdmin(uid: string) {
@@ -125,8 +141,13 @@ function stdDev(values: number[]) {
 
 function getIpMeta(
   ipAddress: string,
-  row?: { city?: string | null; country_code?: string | null; country?: string | null },
-): { location: string; status: "Trusted" | "Observed" } {
+  row?: {
+    city?: string | null;
+    country_code?: string | null;
+    country?: string | null;
+    risk_level?: string | null;
+  },
+): { location: string; status: "Trusted" | "Warning" | "Critical" | "Malicious" } {
   const ip = ipAddress.trim().toLowerCase();
   const isLocal =
     ip === "127.0.0.1" ||
@@ -140,17 +161,41 @@ function getIpMeta(
     return { location: "Local/Private", status: "Trusted" };
   }
 
+  const risk = (row?.risk_level ?? "trusted").toLowerCase();
+  if (risk === "malicious") {
+    return { location: row?.country ?? "Unknown", status: "Malicious" };
+  }
+  if (risk === "critical") {
+    return {
+      location: row?.city && row?.country_code ? `${row.city}, ${row.country_code}` : "Unknown",
+      status: "Critical",
+    };
+  }
+  if (risk === "warning") {
+    return {
+      location: row?.city && row?.country_code ? `${row.city}, ${row.country_code}` : "Unknown",
+      status: "Warning",
+    };
+  }
+
   if (row?.city && row?.country_code) {
     return { location: `${row.city}, ${row.country_code}`, status: "Trusted" };
   }
   if (row?.country) {
-    return { location: row.country, status: "Observed" };
+    return { location: row.country, status: "Trusted" };
   }
-  return { location: "Unknown", status: "Observed" };
+  return { location: "Unknown", status: "Trusted" };
 }
 
 export async function GET(req: Request) {
   try {
+    if (isHardBlockedIp(getRequestIp(req))) {
+      return NextResponse.json(
+        { error: "Blocked IP: access denied by security policy." },
+        { status: 403 },
+      );
+    }
+
     await requireAdmin(req);
 
     const [firebaseUsers, prefsResult, usageResult] = await Promise.all([
@@ -184,6 +229,8 @@ export async function GET(req: Request) {
     let ipTracking = false;
     let ipNote = "IP is not tracked in current schema. Add IP logging on sign-in/events to show it here.";
     const ipByUser = new Map<string, string>();
+    const ipRiskByUser = new Map<string, string>();
+    const ipRiskReasonByUser = new Map<string, string | null>();
     const ipHistoryByUser = new Map<string, IpLogEntry[]>();
     const ipSeenPerUser = new Map<string, Set<string>>();
     let ipData: IpLogRow[] = [];
@@ -191,7 +238,7 @@ export async function GET(req: Request) {
 
     const ipQueryWithGeo = await supabase
       .from("user_ip_logs")
-      .select("user_id, ip_address, seen_at, city, region, country, country_code")
+      .select("user_id, ip_address, seen_at, city, region, country, country_code, risk_level, risk_reason")
       .order("seen_at", { ascending: false })
       .limit(5000);
 
@@ -200,7 +247,7 @@ export async function GET(req: Request) {
     } else {
       const ipQueryLegacy = await supabase
         .from("user_ip_logs")
-        .select("user_id, ip_address, seen_at")
+        .select("user_id, ip_address, seen_at, risk_level, risk_reason")
         .order("seen_at", { ascending: false })
         .limit(5000);
       if (!ipQueryLegacy.error && ipQueryLegacy.data) {
@@ -214,6 +261,8 @@ export async function GET(req: Request) {
       for (const row of ipData) {
         if (!ipByUser.has(row.user_id) && row.ip_address) {
           ipByUser.set(row.user_id, row.ip_address);
+          ipRiskByUser.set(row.user_id, row.risk_level ?? "trusted");
+          ipRiskReasonByUser.set(row.user_id, row.risk_reason ?? null);
         }
 
         if (!row.user_id || !row.ip_address || !row.seen_at) continue;
@@ -237,6 +286,7 @@ export async function GET(req: Request) {
             seenAt: row.seen_at,
             location: meta.location,
             status: meta.status,
+            riskReason: row.risk_reason ?? null,
           });
         }
       }
@@ -281,6 +331,8 @@ export async function GET(req: Request) {
           createdAt: creationTime,
           lastActivityDate,
           ipAddress: ipByUser.get(fUser.uid) ?? null,
+          ipRiskLevel: ipRiskByUser.get(fUser.uid) ?? "trusted",
+          ipRiskReason: ipRiskReasonByUser.get(fUser.uid) ?? null,
           ipHistory: ipHistoryByUser.get(fUser.uid) ?? [],
         };
       })
@@ -401,6 +453,13 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    if (isHardBlockedIp(getRequestIp(req))) {
+      return NextResponse.json(
+        { error: "Blocked IP: access denied by security policy." },
+        { status: 403 },
+      );
+    }
+
     await requireAdmin(req);
 
     const body = (await req.json()) as { targetUserId?: string };
@@ -437,6 +496,13 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    if (isHardBlockedIp(getRequestIp(req))) {
+      return NextResponse.json(
+        { error: "Blocked IP: access denied by security policy." },
+        { status: 403 },
+      );
+    }
+
     await requireAdmin(req);
 
     const body = (await req.json()) as {
@@ -473,6 +539,13 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    if (isHardBlockedIp(getRequestIp(req))) {
+      return NextResponse.json(
+        { error: "Blocked IP: access denied by security policy." },
+        { status: 403 },
+      );
+    }
+
     const admin = await requireAdmin(req);
     const body = (await req.json()) as { targetUserId?: string };
     const targetUserId = body.targetUserId?.trim();
