@@ -28,6 +28,12 @@ type IpLogEntry = {
   status: "Trusted" | "Warning" | "Critical" | "Malicious";
   riskReason: string | null;
 };
+type ActivityEntry = {
+  title: string;
+  description: string;
+  timestamp: string;
+  status: "Trusted" | "Warning" | "Critical" | "Malicious";
+};
 type IpLogRow = {
   user_id: string;
   ip_address: string;
@@ -232,6 +238,7 @@ export async function GET(req: Request) {
     const ipRiskByUser = new Map<string, string>();
     const ipRiskReasonByUser = new Map<string, string | null>();
     const ipHistoryByUser = new Map<string, IpLogEntry[]>();
+    const activityHistoryByUser = new Map<string, ActivityEntry[]>();
     const ipSeenPerUser = new Map<string, Set<string>>();
     let ipData: IpLogRow[] = [];
     let ipError: Error | null = null;
@@ -273,6 +280,9 @@ export async function GET(req: Request) {
         if (!ipHistoryByUser.has(row.user_id)) {
           ipHistoryByUser.set(row.user_id, []);
         }
+        if (!activityHistoryByUser.has(row.user_id)) {
+          activityHistoryByUser.set(row.user_id, []);
+        }
 
         const seenSet = ipSeenPerUser.get(row.user_id)!;
         if (seenSet.has(row.ip_address)) continue;
@@ -287,6 +297,32 @@ export async function GET(req: Request) {
             location: meta.location,
             status: meta.status,
             riskReason: row.risk_reason ?? null,
+          });
+        }
+
+        const activity = activityHistoryByUser.get(row.user_id)!;
+        if (activity.length < 25) {
+          const title =
+            meta.status === "Malicious"
+              ? "Malicious IP Activity"
+              : meta.status === "Critical"
+                ? "Critical Risk Login Pattern"
+                : meta.status === "Warning"
+                  ? "Suspicious Login Pattern"
+                  : "Session Authenticated";
+
+          const description =
+            meta.status === "Trusted"
+              ? `Login/session seen from ${row.ip_address} (${meta.location}).`
+              : row.risk_reason
+                ? `${row.risk_reason} IP: ${row.ip_address} (${meta.location}).`
+                : `Risk signal detected from ${row.ip_address} (${meta.location}).`;
+
+          activity.push({
+            title,
+            description,
+            timestamp: row.seen_at,
+            status: meta.status,
           });
         }
       }
@@ -334,6 +370,7 @@ export async function GET(req: Request) {
           ipRiskLevel: ipRiskByUser.get(fUser.uid) ?? "trusted",
           ipRiskReason: ipRiskReasonByUser.get(fUser.uid) ?? null,
           ipHistory: ipHistoryByUser.get(fUser.uid) ?? [],
+          activityHistory: activityHistoryByUser.get(fUser.uid) ?? [],
         };
       })
       .sort((a, b) => {

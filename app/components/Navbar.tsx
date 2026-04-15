@@ -9,7 +9,8 @@ import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useSearch } from "@/app/context/SearchContext";
 import { useNotifications } from "@/app/context/NotificationContext";
-import { User, LogOut, LayoutDashboard, Bookmark as BookmarkIcon, ChevronDown, Users, Bell, Network, ExternalLink, X, Boxes, ShieldCheck } from "lucide-react";
+import { useTheme } from "@/app/context/ThemeContext";
+import { User, LogOut, LayoutDashboard, Bookmark as BookmarkIcon, ChevronDown, Users, Bell, Network, ExternalLink, X, Boxes, ShieldCheck, Sun, Moon } from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
@@ -32,6 +33,7 @@ export default function Navbar() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     setMounted(true);
@@ -137,7 +139,7 @@ export default function Navbar() {
     <>
       <div className="fixed top-0 w-full z-[1000] px-4 pt-4 sm:pt-6 flex justify-center pointer-events-none">
         <nav
-          className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl border border-gray-200/40 bg-white/40
+          className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl border border-gray-200/40 dark:border-slate-700/40 bg-white/40 dark:bg-slate-900/60
             ${scrolled
               ? "w-full max-w-4xl py-2 px-5 rounded-full"
               : "w-full max-w-7xl py-3 px-6 rounded-3xl"}
@@ -164,17 +166,30 @@ export default function Navbar() {
           {/* Desktop Search & Actions */}
           <div className="hidden lg:flex items-center gap-6 flex-1 justify-end">
 
-            <Link href="/graph" className="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition flex items-center gap-2">
+            <Link href="/graph" className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center gap-2">
               <Network size={16} /> Topology
             </Link>
 
-            <Link href="/community" className="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition flex items-center gap-2">
+            <Link href="/community" className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center gap-2">
               <Users size={16} /> Community
             </Link>
 
-            <Link href="/toolkit" className="text-sm font-semibold text-slate-700 hover:text-indigo-600 transition flex items-center gap-2">
+            <Link href="/toolkit" className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center gap-2">
               <Boxes size={16} /> Toolkit
             </Link>
+
+            {/* Dark Mode Toggle */}
+            <button
+              onClick={toggleTheme}
+              className="p-2.5 rounded-full border border-gray-200/70 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 transition-all duration-300 shadow-sm group cursor-pointer"
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? (
+                <Sun size={18} className="text-amber-400 group-hover:text-amber-300 transition-colors" />
+              ) : (
+                <Moon size={18} className="text-gray-600 group-hover:text-indigo-600 transition-colors" />
+              )}
+            </button>
 
             {/* Notifications */}
             <div className="relative" ref={notificationRef}>
@@ -183,7 +198,7 @@ export default function Navbar() {
                   setNotificationOpen(!notificationOpen);
                   if (!notificationOpen) markAllAsRead();
                 }}
-                className="p-2.5 rounded-full border border-gray-200/70 bg-white/50 hover:bg-white transition-all duration-300 shadow-sm relative group"
+                className="p-2.5 rounded-full border border-gray-200/70 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 transition-all duration-300 shadow-sm relative group"
               >
                 <Bell size={18} className="text-gray-600 group-hover:text-indigo-600 transition-colors" />
                 {unreadCount > 0 && (
@@ -283,7 +298,7 @@ export default function Navbar() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search cases..."
-                className="w-full bg-slate-50 border border-gray-200/50 rounded-full pl-9 pr-4 py-1.5 text-sm text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-gray-200/50 dark:border-slate-600 rounded-full pl-9 pr-4 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
               />
               <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
                 🔎
@@ -330,12 +345,12 @@ export default function Navbar() {
               <div className="relative" ref={userDropdownRef}>
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="group flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full border border-gray-200/70 bg-white/50 hover:bg-white transition-all duration-300 shadow-sm"
+                  className="group flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full border border-gray-200/70 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 transition-all duration-300 shadow-sm"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-inner font-bold text-sm flex-shrink-0">
                     {user.displayName ? user.displayName[0].toUpperCase() : (user.email ? user.email[0].toUpperCase() : "?")}
                   </div>
-                  <span className="max-w-0 overflow-hidden text-sm font-semibold text-gray-800 group-hover:max-w-[120px] transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] whitespace-nowrap">
+                  <span className="max-w-0 overflow-hidden text-sm font-semibold text-gray-800 dark:text-slate-200 group-hover:max-w-[120px] transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] whitespace-nowrap">
                     {user.displayName || user.email?.split('@')[0]}
                   </span>
                   <ChevronDown size={14} className="text-gray-500 group-hover:text-indigo-500 transition-colors" />
@@ -409,16 +424,16 @@ export default function Navbar() {
               onClick={() => setMenuOpen(!menuOpen)}
               className="relative w-6 h-6 flex flex-col justify-between"
             >
-              <span className={`h-0.5 w-full bg-gray-800 transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-2.5" : ""}`} />
-              <span className={`h-0.5 w-full bg-gray-800 transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
-              <span className={`h-0.5 w-full bg-gray-800 transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-2.5" : ""}`} />
+              <span className={`h-0.5 w-full bg-gray-800 dark:bg-slate-200 transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-2.5" : ""}`} />
+              <span className={`h-0.5 w-full bg-gray-800 dark:bg-slate-200 transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
+              <span className={`h-0.5 w-full bg-gray-800 dark:bg-slate-200 transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-2.5" : ""}`} />
             </button>
           </div>
         </nav>
 
         {/* Mobile Dropdown */}
         <div
-          className={`absolute top-[calc(100%+8px)] left-0 right-0 mx-auto w-full max-w-md bg-white border border-gray-100 shadow-2xl rounded-3xl overflow-hidden pointer-events-auto transition-all duration-300 z-[1100] ${menuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}
+          className={`absolute top-[calc(100%+8px)] left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 shadow-2xl rounded-3xl overflow-hidden pointer-events-auto transition-all duration-300 z-[1100] ${menuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}
         >
           <div className="py-2">
             <div className="flex flex-col items-start gap-2 text-base font-medium px-4 pt-4">
@@ -457,13 +472,24 @@ export default function Navbar() {
                   <User size={18} className="text-indigo-500" /> Researcher Login
                 </button>
               )}
-              <button onClick={toggleNotifications} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
+              <button onClick={toggleNotifications} className="flex items-center gap-3 text-gray-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition w-full py-2">
                 <Bell size={18} className="text-indigo-500" />
                 <span className="flex-1 text-left">Push Notifications</span>
                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${notificationsEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
                   {notificationsEnabled ? 'ON' : 'OFF'}
                 </span>
                 {unreadCount > 0 && <span className="w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold ml-2">{unreadCount}</span>}
+              </button>
+              <button onClick={toggleTheme} className="flex items-center gap-3 text-gray-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition w-full py-2 cursor-pointer">
+                {theme === "dark" ? (
+                  <Sun size={18} className="text-amber-400" />
+                ) : (
+                  <Moon size={18} className="text-indigo-500" />
+                )}
+                <span className="flex-1 text-left">Dark Mode</span>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${theme === 'dark' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
+                  {theme === 'dark' ? 'ON' : 'OFF'}
+                </span>
               </button>
             </div>
 

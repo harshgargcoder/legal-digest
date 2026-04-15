@@ -144,29 +144,28 @@ async function fetchIpGeo(ipAddress: string) {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`https://ipwho.is/${encodeURIComponent(ipAddress)}`, {
+    const res = await fetch(`https://freeipapi.com/api/json/${encodeURIComponent(ipAddress)}`, {
       signal: controller.signal,
       cache: "no-store",
+      headers: { "User-Agent": "LegalDigest/1.0" },
     });
     clearTimeout(timeout);
     if (!res.ok) return null;
 
     const data = (await res.json()) as {
-      success?: boolean;
-      city?: string;
-      region?: string;
-      country?: string;
-      country_code?: string;
-      connection?: { isp?: string };
+      cityName?: string;
+      regionName?: string;
+      countryName?: string;
+      countryCode?: string;
     };
 
-    if (!data.success) return null;
+    if (!data.countryName || data.countryName === "-") return null;
     return {
-      city: data.city ?? null,
-      region: data.region ?? null,
-      country: data.country ?? null,
-      countryCode: data.country_code ?? null,
-      isp: data.connection?.isp ?? null,
+      city: data.cityName && data.cityName !== "-" ? data.cityName : null,
+      region: data.regionName && data.regionName !== "-" ? data.regionName : null,
+      country: data.countryName,
+      countryCode: data.countryCode && data.countryCode !== "-" ? data.countryCode : null,
+      isp: null,
     };
   } catch {
     return null;

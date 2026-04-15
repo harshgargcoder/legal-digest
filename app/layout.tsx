@@ -7,6 +7,7 @@ import Script from "next/script";
 import { Search } from "lucide-react";
 import { SearchProvider } from "./context/SearchContext";
 import { NotificationProvider } from "./context/NotificationContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import SupportBot from "@/app/components/SupportBot";
 
 const GA_ID = "G-Z6NGF984TS";
@@ -36,10 +37,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ThemeProvider>
         <SearchProvider>
           <NotificationProvider>
             <Navbar />
@@ -66,6 +68,7 @@ export default function RootLayout({
           `}
           </Script>
         </SearchProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

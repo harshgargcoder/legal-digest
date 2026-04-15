@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import createGlobe from "cobe";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import {
   Bell,
   CheckCircle2,
   Clock3,
+  FileSearch,
   KeyRound,
   Loader2,
   RefreshCcw,
@@ -19,6 +21,7 @@ import {
   ShieldCheck,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 
 type AdminUser = {
@@ -39,6 +42,12 @@ type AdminUser = {
     location: string;
     status: "Trusted" | "Warning" | "Critical" | "Malicious";
     riskReason: string | null;
+  }[];
+  activityHistory: {
+    title: string;
+    description: string;
+    timestamp: string;
+    status: "Trusted" | "Warning" | "Critical" | "Malicious";
   }[];
 };
 
@@ -86,6 +95,189 @@ function formatDate(value: string | null, withTime = false) {
   });
 }
 
+function formatRelativeTime(value: string | null) {
+  if (!value) return "Unknown";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  const diff = Date.now() - date.getTime();
+  const minutes = Math.floor(diff / (1000 * 60));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+  return formatDate(value);
+}
+
+function getRegionFromLocation(location: string) {
+  const trimmed = location.trim();
+  if (!trimmed || trimmed === "Unknown" || trimmed === "Local/Private") {
+    return "Unknown";
+  }
+
+  const cc = trimmed.includes(",")
+    ? trimmed.split(",").pop()?.trim().toUpperCase()
+    : trimmed.toUpperCase();
+
+  if (!cc) return "Unknown";
+
+  const NA = new Set(["US", "CA", "MX", "UNITED STATES", "CANADA", "MEXICO"]);
+  const EU = new Set([
+    "GB", "IE", "FR", "DE", "ES", "IT", "NL", "BE", "SE", "NO", "DK", "FI",
+    "CH", "AT", "PL", "PT", "CZ", "HU", "GR", "RO", "UA",
+    "UNITED KINGDOM", "FRANCE", "GERMANY", "SPAIN", "ITALY", "IRELAND", "POLAND", "NETHERLANDS"
+  ]);
+  const AS = new Set([
+    "IN", "CN", "JP", "KR", "SG", "MY", "TH", "VN", "ID", "AE", "SA", "PK",
+    "BD", "LK", "NP", "INDIA", "CHINA", "JAPAN", "SOUTH KOREA", "SINGAPORE", "MALAYSIA", "THAILAND", "VIETNAM", "INDONESIA", "PAKISTAN", "BANGLADESH"
+  ]);
+
+  if (NA.has(cc)) return "NA";
+  if (EU.has(cc)) return "EU";
+  if (AS.has(cc)) return "AS";
+  return "Other";
+}
+
+const COUNTRY_COORDS: Record<string, [number, number]> = {
+  US: [37.0902, -95.7129], CA: [56.1304, -106.3468], GB: [55.3781, -3.436],
+  IN: [20.5937, 78.9629], FR: [46.2276, 2.2137], DE: [51.1657, 10.4515],
+  CN: [35.8617, 104.1954], JP: [36.2048, 138.2529], KR: [35.9078, 127.7669],
+  AU: [-25.2744, 133.7751], BR: [-14.235, -51.9253], IT: [41.8719, 12.5674],
+  ES: [40.4637, -3.7492], ZA: [-30.5595, 22.9375], NG: [9.0820, 8.6753],
+  AE: [23.4241, 53.8478], SA: [23.8859, 45.0792], SG: [1.3521, 103.8198],
+  MY: [4.2105, 101.9758], TH: [15.8700, 100.9925], VN: [14.0583, 108.2772],
+  ID: [-0.7893, 113.9213], PK: [30.3753, 69.3451], BD: [23.6850, 90.3563],
+  NL: [52.1326, 5.2913], PL: [51.9194, 19.1451], IE: [53.1424, -7.6921]
+};
+
+const COUNTRY_NAME_TO_CODE: Record<string, string> = {
+  "UNITED STATES": "US", "CANADA": "CA", "MEXICO": "MX",
+  "UNITED KINGDOM": "GB", "FRANCE": "FR", "GERMANY": "DE", "SPAIN": "ES", "ITALY": "IT",
+  "IRELAND": "IE", "POLAND": "PL", "NETHERLANDS": "NL",
+  "INDIA": "IN", "CHINA": "CN", "JAPAN": "JP", "SOUTH KOREA": "KR", "SINGAPORE": "SG",
+  "MALAYSIA": "MY", "THAILAND": "TH", "VIETNAM": "VN", "INDONESIA": "ID", "PAKISTAN": "PK", "BANGLADESH": "BD"
+};
+
+function getCoordinatesFromLocation(location: string): [number, number] | null {
+  const trimmed = location.trim();
+  const cc = trimmed.includes(",")
+    ? trimmed.split(",").pop()?.trim().toUpperCase()
+    : trimmed.toUpperCase();
+
+  if (!cc) return null;
+  if (COUNTRY_COORDS[cc]) return COUNTRY_COORDS[cc];
+  if (COUNTRY_NAME_TO_CODE[cc] && COUNTRY_COORDS[COUNTRY_NAME_TO_CODE[cc]]) {
+    return COUNTRY_COORDS[COUNTRY_NAME_TO_CODE[cc]];
+  }
+  return null;
+}
+
+function GlobeTracker({ markers }: { markers: { location: [number, number]; size: number }[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    let phi = 0;
+    if (!canvasRef.current) return;
+    const globe = createGlobe(canvasRef.current, {
+      devicePixelRatio: 2,
+      width: 800,
+      height: 800,
+      phi: 0,
+      theta: 0.15,
+      dark: 0,
+      diffuse: 1.2,
+      mapSamples: 16000,
+      mapBrightness: 6,
+      baseColor: [0.65, 0.8, 0.85],
+      markerColor: [0.45, 0.35, 0.8],
+      glowColor: [0.95, 0.98, 1],
+      markers: markers,
+      onRender: (state: Record<string, any>) => {
+        state.phi = phi;
+        phi += 0.003;
+      },
+    } as any);
+    return () => globe.destroy();
+  }, [markers]);
+
+  return (
+    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[180%] max-w-[500px] flex items-center justify-center pointer-events-none opacity-80">
+      <canvas
+        ref={canvasRef}
+        style={{ width: "100%", height: "auto", aspectRatio: 1 }}
+      />
+    </div>
+  );
+}
+
+function FullScreenGlobe({ markers }: { markers: { location: [number, number]; size: number }[] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pointerInteracting = useRef<number | null>(null);
+  const pointerInteractionMovement = useRef(0);
+
+  useEffect(() => {
+    let phi = 0;
+    if (!canvasRef.current) return;
+    const globe = createGlobe(canvasRef.current, {
+      devicePixelRatio: 2,
+      width: 1000,
+      height: 1000,
+      phi: 0,
+      theta: 0.15,
+      dark: 1,
+      diffuse: 1.2,
+      mapSamples: 24000,
+      mapBrightness: 6,
+      baseColor: [0.15, 0.2, 0.35],
+      markerColor: [0.45, 0.35, 0.8],
+      glowColor: [1, 1, 1],
+      markers: markers,
+      onRender: (state: Record<string, any>) => {
+        if (!pointerInteracting.current) {
+          phi += 0.003;
+        }
+        state.phi = phi + pointerInteractionMovement.current;
+      },
+    } as any);
+
+    return () => globe.destroy();
+  }, [markers]);
+
+  return (
+    <div className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing">
+      <canvas
+        ref={canvasRef}
+        onPointerDown={(e) => {
+          pointerInteracting.current = e.clientX;
+          if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
+        }}
+        onPointerUp={() => {
+          pointerInteracting.current = null;
+          if (canvasRef.current) canvasRef.current.style.cursor = "grab";
+        }}
+        onPointerOut={() => {
+          pointerInteracting.current = null;
+          if (canvasRef.current) canvasRef.current.style.cursor = "grab";
+        }}
+        onMouseMove={(e) => {
+          if (pointerInteracting.current !== null) {
+            const delta = e.clientX - pointerInteracting.current;
+            pointerInteractionMovement.current = delta * 0.01;
+          }
+        }}
+        onTouchMove={(e) => {
+          if (pointerInteracting.current !== null && e.touches[0]) {
+            const delta = e.touches[0].clientX - pointerInteracting.current;
+            pointerInteractionMovement.current = delta * 0.01;
+          }
+        }}
+        style={{ width: "100%", height: "100%", contain: "layout paint size", opacity: 0.9 }}
+      />
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,6 +302,7 @@ export default function AdminPage() {
   const [resetLinkMap, setResetLinkMap] = useState<Record<string, string>>({});
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isGlobeModalOpen, setIsGlobeModalOpen] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -287,13 +480,67 @@ export default function AdminPage() {
   }, [search, users]);
 
   const activityFeed = useMemo(() => {
+    const getLatestTime = (user: AdminUser) => {
+      const historyTime = user.activityHistory?.[0]?.timestamp;
+      if (historyTime) return new Date(historyTime).getTime();
+      return user.lastSignInTime ? new Date(user.lastSignInTime).getTime() : 0;
+    };
     return [...users]
-      .sort((a, b) => {
-        const aTime = a.lastSignInTime ? new Date(a.lastSignInTime).getTime() : 0;
-        const bTime = b.lastSignInTime ? new Date(b.lastSignInTime).getTime() : 0;
-        return bTime - aTime;
-      })
+      .sort((a, b) => getLatestTime(b) - getLatestTime(a))
       .slice(0, 6);
+  }, [users]);
+
+  const regionalInsights = useMemo(() => {
+    const bucket = {
+      NA: 0,
+      EU: 0,
+      AS: 0,
+      Other: 0,
+      Unknown: 0,
+    };
+
+    let trackedCount = 0;
+    for (const user of users) {
+      if (user.ipHistory && user.ipHistory.length > 0) {
+        trackedCount++;
+        const location = user.ipHistory[0].location;
+        const region = getRegionFromLocation(location);
+        if (region in bucket) {
+          bucket[region as keyof typeof bucket] += 1;
+        } else {
+          bucket.Other += 1;
+        }
+      }
+    }
+
+    const total = Math.max(trackedCount, 1);
+
+    const sizeMap: Record<string, number> = {};
+    for (const user of users) {
+      if (user.ipHistory && user.ipHistory.length > 0) {
+        const location = user.ipHistory[0].location;
+        const coords = getCoordinatesFromLocation(location);
+        if (coords) {
+          const key = coords.join(',');
+          sizeMap[key] = (sizeMap[key] || 0) + 0.02;
+        }
+      }
+    }
+
+    const markers = Object.entries(sizeMap).map(([key, size]) => {
+      const [lat, lon] = key.split(',').map(Number);
+      return { location: [lat, lon] as [number, number], size: Math.min(size + 0.05, 0.15) };
+    });
+
+    return {
+      markers,
+      totalUsers: trackedCount,
+      NA: Math.round((bucket.NA / total) * 100),
+      EU: Math.round((bucket.EU / total) * 100),
+      AS: Math.round((bucket.AS / total) * 100),
+      Other: Math.round((bucket.Other / total) * 100),
+      Unknown: Math.round((bucket.Unknown / total) * 100),
+    };
   }, [users]);
 
   const selectedUser = useMemo(() => {
@@ -434,8 +681,8 @@ export default function AdminPage() {
               {message && (
                 <div
                   className={`mt-4 rounded-xl border px-4 py-3 flex items-center gap-2 ${message.type === "success"
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                      : "bg-rose-50 border-rose-200 text-rose-800"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                    : "bg-rose-50 border-rose-200 text-rose-800"
                     }`}
                 >
                   {message.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
@@ -502,7 +749,7 @@ export default function AdminPage() {
                                 </td>
                                 <td className="px-5 py-4 text-sm text-slate-600">{user.email || "No email"}</td>
                                 <td className="px-5 py-4 text-sm text-slate-600">
-                                  {formatDate(user.lastActivityDate) || formatDate(user.lastSignInTime)}
+                                  {formatDate(user.lastActivityDate || user.lastSignInTime)}
                                 </td>
                                 <td className="px-5 py-4 text-sm text-slate-600 font-mono">
                                   <div className="flex items-center gap-2">
@@ -527,8 +774,8 @@ export default function AdminPage() {
                                 <td className="px-5 py-4">
                                   <span
                                     className={`inline-flex px-2.5 py-1 rounded-md text-xs font-semibold ${user.isBanned
-                                        ? "bg-rose-100 text-rose-700"
-                                        : "bg-emerald-100 text-emerald-700"
+                                      ? "bg-rose-100 text-rose-700"
+                                      : "bg-emerald-100 text-emerald-700"
                                       }`}
                                   >
                                     {user.isBanned ? "Banned" : "Active"}
@@ -537,7 +784,7 @@ export default function AdminPage() {
                                 <td className="px-5 py-4">
                                   <div className="flex justify-center items-center gap-2">
                                     <button
-                                      className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50"
+                                      className="p-2 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                                       onClick={() => void handleResetPassword(user.uid)}
                                       disabled={isBusy}
                                       title="Reset password"
@@ -545,18 +792,19 @@ export default function AdminPage() {
                                       <KeyRound size={14} className="text-indigo-700" />
                                     </button>
                                     <button
-                                      className="px-2.5 rounded-lg border border-indigo-200 text-xs text-indigo-700 hover:bg-indigo-50"
+                                      className="p-2 rounded-lg border border-indigo-200 hover:bg-indigo-50 cursor-pointer"
                                       onClick={() => {
                                         setSelectedUserId(user.uid);
                                         setActiveSection("userLogs");
                                       }}
+                                      title="View logs"
                                     >
-                                      Logs
+                                      <FileSearch size={14} className="text-indigo-700" />
                                     </button>
                                     <button
-                                      className={`p-2 rounded-lg border disabled:opacity-50 ${user.isBanned
-                                          ? "border-emerald-200 hover:bg-emerald-50"
-                                          : "border-amber-200 hover:bg-amber-50"
+                                      className={`p-2 rounded-lg border disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed ${user.isBanned
+                                        ? "border-emerald-200 hover:bg-emerald-50"
+                                        : "border-amber-200 hover:bg-amber-50"
                                         }`}
                                       onClick={() => void handleBanToggle(user)}
                                       disabled={isBusy}
@@ -565,7 +813,7 @@ export default function AdminPage() {
                                       <Ban size={14} className={user.isBanned ? "text-emerald-700" : "text-amber-700"} />
                                     </button>
                                     <button
-                                      className="p-2 rounded-lg border border-rose-200 hover:bg-rose-50 disabled:opacity-50"
+                                      className="p-2 rounded-lg border border-rose-200 hover:bg-rose-50 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
                                       onClick={() => void handleDeleteUser(user)}
                                       disabled={isBusy}
                                       title="Delete user"
@@ -598,12 +846,16 @@ export default function AdminPage() {
                       activityFeed.map((item) => (
                         <div key={item.uid} className="bg-white/70 border border-white rounded-xl p-3">
                           <p className="text-sm font-semibold text-slate-800">
-                            {item.isBanned ? "Flagged user event" : "Login activity"}
+                            {item.activityHistory && item.activityHistory.length > 0
+                              ? item.activityHistory[0].title
+                              : (item.isBanned ? "Flagged user event" : "Login activity")}
                           </p>
                           <p className="text-xs text-slate-500 mt-1">{item.displayName || item.email || item.uid}</p>
                           <p className="text-xs text-slate-400 mt-1 inline-flex items-center gap-1">
                             <Clock3 size={12} />
-                            {formatDate(item.lastSignInTime, true)}
+                            {item.activityHistory && item.activityHistory.length > 0
+                              ? formatDate(item.activityHistory[0].timestamp, true)
+                              : formatDate(item.lastSignInTime, true)}
                           </p>
                         </div>
                       ))
@@ -614,17 +866,98 @@ export default function AdminPage() {
                   </button>
                 </aside>
               </div>
+
+              <section className="mt-4 bg-white border border-slate-200 rounded-2xl p-5">
+                <div className="grid lg:grid-cols-[320px_1fr] gap-6 items-stretch">
+                  <div className="flex flex-col justify-center py-2">
+                    <h3 className="text-[13px] font-black uppercase tracking-[0.16em] text-slate-900">
+                      REGIONAL INSIGHTS
+                    </h3>
+                    <p className="text-[13px] text-slate-700 mt-4 leading-relaxed font-medium">
+                      Global access distribution shows increased volatility in Eastern European nodes over the last 24 hours.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-6">
+                      <span className="px-3 py-1.5 rounded-md bg-[#eaf1fb] text-slate-800 text-[11px] font-bold">
+                        NA: {regionalInsights.NA}%
+                      </span>
+                      <span className="px-3 py-1.5 rounded-md bg-[#eaf1fb] text-slate-800 text-[11px] font-bold">
+                        EU: {regionalInsights.EU}%
+                      </span>
+                      <span className="px-3 py-1.5 rounded-md bg-[#eaf1fb] text-slate-800 text-[11px] font-bold">
+                        AS: {regionalInsights.AS}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#9ebcc0] to-[#769b9e] min-h-[220px] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-[#ffffff15] mix-blend-overlay">
+                      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                        <pattern id="dotted" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
+                          <circle fill="#ffffff" cx="2" cy="2" r="1.5"></circle>
+                        </pattern>
+                        <rect x="0" y="0" width="100%" height="100%" fill="url(#dotted)"></rect>
+                      </svg>
+                    </div>
+                    
+                    <GlobeTracker markers={regionalInsights.markers} />
+                    
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/3">
+                      <button 
+                        onClick={() => setIsGlobeModalOpen(true)}
+                        className="w-14 h-14 rounded-xl bg-[#2e23b2] text-white flex items-center justify-start pl-4 shadow-xl hover:bg-[#20188b] transition-colors overflow-hidden"
+                      >
+                        <span className="text-2xl font-light leading-none mb-1">+</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </>
           )}
 
           {activeSection === "userLogs" && selectedUser && (
             <UserLogsPanel
+              key={selectedUser.uid}
               user={selectedUser}
               onBackToList={() => setActiveSection("dashboard")}
             />
           )}
         </div>
       </div>
+
+      {isGlobeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 md:p-12">
+          <div className="relative w-full max-w-5xl aspect-square max-h-full bg-[#1a2236] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div className="absolute inset-0 bg-[#ffffff0a] mix-blend-overlay">
+              <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                <pattern id="dotted-large" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+                  <circle fill="#ffffff" cx="4" cy="4" r="2"></circle>
+                </pattern>
+                <rect x="0" y="0" width="100%" height="100%" fill="url(#dotted-large)"></rect>
+              </svg>
+            </div>
+            
+            <button 
+              onClick={() => setIsGlobeModalOpen(false)}
+              className="absolute top-6 right-6 z-10 p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
+            >
+              <X size={24} />
+            </button>
+
+            <div className="absolute top-8 left-8 z-10 max-w-sm pointer-events-none">
+              <h2 className="text-2xl font-black uppercase text-white tracking-widest drop-shadow-md">
+                Global Network Matrix
+              </h2>
+              <p className="text-indigo-200 mt-2 font-medium leading-relaxed drop-shadow">
+                Live visualization of distributed access points based on the latest {regionalInsights.totalUsers} session nodes.
+              </p>
+            </div>
+            
+            <div className="flex-1 w-full relative">
+              <FullScreenGlobe markers={regionalInsights.markers} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -687,31 +1020,23 @@ function UserLogsPanel({
   user: AdminUser;
   onBackToList: () => void;
 }) {
-  const recentLogs = [
-    {
-      title: "Password Change Success",
-      desc: "Initiated from admin portal from authenticated session.",
-      time: "2 hours ago",
-      status: "Trusted",
-    },
-    {
-      title: "Login from Flagged Device",
-      desc: "Verification required for unknown IP/device combination.",
-      time: "Yesterday",
-      status: "Requires review",
-    },
-    {
-      title: "Audit Record Updated",
-      desc: "Profile details were modified by admin action.",
-      time: "3 days ago",
-      status: "Trusted",
-    },
-  ];
+  const [activityPage, setActivityPage] = useState(1);
+  const [ipPage, setIpPage] = useState(1);
+  const itemsPerPage = 5;
 
   const ipRows = user.ipHistory;
   const highRiskCount = ipRows.filter(
     (r) => r.status === "Critical" || r.status === "Malicious",
   ).length;
+
+  const totalActivityPages = Math.ceil(user.activityHistory.length / itemsPerPage);
+  const currentActivityItems = user.activityHistory.slice(
+    (activityPage - 1) * itemsPerPage,
+    activityPage * itemsPerPage,
+  );
+
+  const totalIpPages = Math.ceil(ipRows.length / itemsPerPage);
+  const currentIpItems = ipRows.slice((ipPage - 1) * itemsPerPage, ipPage * itemsPerPage);
 
   return (
     <div className="space-y-4">
@@ -780,18 +1105,56 @@ function UserLogsPanel({
         <section className="bg-white border border-slate-200 rounded-2xl p-5">
           <h3 className="font-bold text-slate-900 mb-4">Security & Activity History</h3>
           <div className="space-y-3">
-            {recentLogs.map((log) => (
-              <div key={log.title} className="border border-slate-100 rounded-xl p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold text-slate-800">{log.title}</p>
-                  <p className="text-[11px] uppercase font-semibold text-slate-400">{log.time}</p>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">{log.desc}</p>
-                <span className={`inline-flex mt-2 px-2 py-0.5 rounded text-[10px] font-semibold ${log.status === "Flagged" || log.status === "Requires review" ? "bg-rose-100 text-rose-700" : "bg-indigo-100 text-indigo-700"}`}>
-                  {log.status}
-                </span>
-              </div>
-            ))}
+            {user.activityHistory.length === 0 ? (
+              <p className="text-xs text-slate-500">No real activity events available for this user yet.</p>
+            ) : (
+              <>
+                {currentActivityItems.map((log) => (
+                  <div key={`${log.title}-${log.timestamp}`} className="border border-slate-100 rounded-xl p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-semibold text-slate-800">{log.title}</p>
+                      <p className="text-[11px] uppercase font-semibold text-slate-400">
+                        {formatRelativeTime(log.timestamp)}
+                      </p>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">{log.description}</p>
+                    <span
+                      className={`inline-flex mt-2 px-2 py-0.5 rounded text-[10px] font-semibold ${log.status === "Malicious"
+                        ? "bg-rose-100 text-rose-700"
+                        : log.status === "Critical"
+                          ? "bg-orange-100 text-orange-700"
+                          : log.status === "Warning"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-indigo-100 text-indigo-700"
+                        }`}
+                    >
+                      {log.status}
+                    </span>
+                  </div>
+                ))}
+                {totalActivityPages > 1 && (
+                  <div className="flex items-center justify-between mt-4">
+                    <button
+                      onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                      disabled={activityPage === 1}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs font-semibold text-slate-500">
+                      Page {activityPage} of {totalActivityPages}
+                    </span>
+                    <button
+                      onClick={() => setActivityPage((p) => Math.min(totalActivityPages, p + 1))}
+                      disabled={activityPage === totalActivityPages}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </section>
         <section className="bg-white border border-slate-200 rounded-2xl p-5">
@@ -800,33 +1163,55 @@ function UserLogsPanel({
             {ipRows.length === 0 ? (
               <p className="text-xs text-slate-500">No tracked IP sessions for this user yet.</p>
             ) : (
-              ipRows.map((row) => (
-                <div key={`${row.ipAddress}-${row.seenAt}`} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 text-xs border border-slate-100 rounded-lg p-2.5">
-                  <div>
-                    <p className="font-mono text-slate-700">{row.ipAddress}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(row.seenAt, true)}</p>
-                  </div>
-                  <div>
-                    <p className="text-slate-500">{row.location}</p>
-                    {row.riskReason && row.status !== "Trusted" && (
-                      <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{row.riskReason}</p>
-                    )}
-                  </div>
-                  <span
-                    className={`px-2 py-0.5 rounded font-semibold ${
-                      row.status === "Malicious"
+              <>
+                {currentIpItems.map((row) => (
+                  <div key={`${row.ipAddress}-${row.seenAt}`} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 text-xs border border-slate-100 rounded-lg p-2.5">
+                    <div>
+                      <p className="font-mono text-slate-700">{row.ipAddress}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(row.seenAt, true)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500">{row.location}</p>
+                      {row.riskReason && row.status !== "Trusted" && (
+                        <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{row.riskReason}</p>
+                      )}
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded font-semibold ${row.status === "Malicious"
                         ? "bg-rose-100 text-rose-700"
                         : row.status === "Critical"
                           ? "bg-orange-100 text-orange-700"
                           : row.status === "Warning"
                             ? "bg-amber-100 text-amber-700"
                             : "bg-indigo-100 text-indigo-700"
-                    }`}
-                  >
-                    {row.status}
-                  </span>
-                </div>
-              ))
+                        }`}
+                    >
+                      {row.status}
+                    </span>
+                  </div>
+                ))}
+                {totalIpPages > 1 && (
+                  <div className="flex items-center justify-between mt-4">
+                    <button
+                      onClick={() => setIpPage((p) => Math.max(1, p - 1))}
+                      disabled={ipPage === 1}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-xs font-semibold text-slate-500">
+                      Page {ipPage} of {totalIpPages}
+                    </span>
+                    <button
+                      onClick={() => setIpPage((p) => Math.min(totalIpPages, p + 1))}
+                      disabled={ipPage === totalIpPages}
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </section>
