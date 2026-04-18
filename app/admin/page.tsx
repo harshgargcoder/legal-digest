@@ -22,6 +22,8 @@ import {
   Trash2,
   Users,
   X,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 type AdminUser = {
@@ -303,6 +305,7 @@ export default function AdminPage() {
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isGlobeModalOpen, setIsGlobeModalOpen] = useState(false);
+  const [isSidebarVisible, setIsSidebarVisible] = useState(true);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
@@ -490,59 +493,6 @@ export default function AdminPage() {
       .slice(0, 6);
   }, [users]);
 
-  const regionalInsights = useMemo(() => {
-    const bucket = {
-      NA: 0,
-      EU: 0,
-      AS: 0,
-      Other: 0,
-      Unknown: 0,
-    };
-
-    let trackedCount = 0;
-    for (const user of users) {
-      if (user.ipHistory && user.ipHistory.length > 0) {
-        trackedCount++;
-        const location = user.ipHistory[0].location;
-        const region = getRegionFromLocation(location);
-        if (region in bucket) {
-          bucket[region as keyof typeof bucket] += 1;
-        } else {
-          bucket.Other += 1;
-        }
-      }
-    }
-
-    const total = Math.max(trackedCount, 1);
-
-    const sizeMap: Record<string, number> = {};
-    for (const user of users) {
-      if (user.ipHistory && user.ipHistory.length > 0) {
-        const location = user.ipHistory[0].location;
-        const coords = getCoordinatesFromLocation(location);
-        if (coords) {
-          const key = coords.join(',');
-          sizeMap[key] = (sizeMap[key] || 0) + 0.02;
-        }
-      }
-    }
-
-    const markers = Object.entries(sizeMap).map(([key, size]) => {
-      const [lat, lon] = key.split(',').map(Number);
-      return { location: [lat, lon] as [number, number], size: Math.min(size + 0.05, 0.15) };
-    });
-
-    return {
-      markers,
-      totalUsers: trackedCount,
-      NA: Math.round((bucket.NA / total) * 100),
-      EU: Math.round((bucket.EU / total) * 100),
-      AS: Math.round((bucket.AS / total) * 100),
-      Other: Math.round((bucket.Other / total) * 100),
-      Unknown: Math.round((bucket.Unknown / total) * 100),
-    };
-  }, [users]);
-
   const selectedUser = useMemo(() => {
     if (!selectedUserId) return users[0] ?? null;
     return users.find((u) => u.uid === selectedUserId) ?? users[0] ?? null;
@@ -577,9 +527,18 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-[#f3f6fb] pt-20">
       <div className="flex min-h-[calc(100vh-5rem)]">
-        <aside className="hidden lg:flex w-64 bg-[#eef3fa] border-r border-slate-200/70 p-5 flex-col">
+        <aside className={`${isSidebarVisible ? "w-64 p-5" : "w-0 overflow-hidden p-0"} transition-all duration-300 bg-[#eef3fa] border-r border-slate-200/70 flex-col hidden lg:flex relative`}>
           <div className="pb-6 border-b border-slate-200/70">
-            <h2 className="text-xl font-black text-slate-900">Admin Ledger</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black text-slate-900">Admin Ledger</h2>
+              <button 
+                onClick={() => setIsSidebarVisible(false)}
+                className="p-1.5 rounded-lg hover:bg-white text-slate-400 hover:text-slate-600 transition-colors"
+                title="Hide Sidebar"
+              >
+                <PanelLeftClose size={18} />
+              </button>
+            </div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 mt-1">Institutional Panel</p>
           </div>
           <nav className="mt-5 space-y-1 text-sm">
@@ -611,15 +570,26 @@ export default function AdminPage() {
 
         <div className="flex-1 p-4 md:p-6 xl:p-8">
           <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
-            <div className="relative w-full max-w-md">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search logs, IPs or users..."
-                className="w-full pl-9 pr-3 py-2.5 bg-[#f4f7fc] border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-300"
-              />
+            <div className="flex items-center gap-3 flex-1">
+              {!isSidebarVisible && (
+                <button 
+                  onClick={() => setIsSidebarVisible(true)}
+                  className="p-2 rounded-xl bg-[#f4f7fc] border border-slate-200 text-indigo-600 hover:bg-white transition-all shadow-sm"
+                  title="Show Sidebar"
+                >
+                  <PanelLeftOpen size={20} />
+                </button>
+              )}
+              <div className="relative w-full max-w-md">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search logs, IPs or users..."
+                  className="w-full pl-9 pr-3 py-2.5 bg-[#f4f7fc] border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-300"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button className="w-9 h-9 rounded-lg bg-[#f4f7fc] border border-slate-200 flex items-center justify-center text-slate-500">
@@ -867,50 +837,7 @@ export default function AdminPage() {
                 </aside>
               </div>
 
-              <section className="mt-4 bg-white border border-slate-200 rounded-2xl p-5">
-                <div className="grid lg:grid-cols-[320px_1fr] gap-6 items-stretch">
-                  <div className="flex flex-col justify-center py-2">
-                    <h3 className="text-[13px] font-black uppercase tracking-[0.16em] text-slate-900">
-                      REGIONAL INSIGHTS
-                    </h3>
-                    <p className="text-[13px] text-slate-700 mt-4 leading-relaxed font-medium">
-                      Global access distribution shows increased volatility in Eastern European nodes over the last 24 hours.
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-6">
-                      <span className="px-3 py-1.5 rounded-md bg-[#eaf1fb] text-slate-800 text-[11px] font-bold">
-                        NA: {regionalInsights.NA}%
-                      </span>
-                      <span className="px-3 py-1.5 rounded-md bg-[#eaf1fb] text-slate-800 text-[11px] font-bold">
-                        EU: {regionalInsights.EU}%
-                      </span>
-                      <span className="px-3 py-1.5 rounded-md bg-[#eaf1fb] text-slate-800 text-[11px] font-bold">
-                        AS: {regionalInsights.AS}%
-                      </span>
-                    </div>
-                  </div>
-                  <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-[#9ebcc0] to-[#769b9e] min-h-[220px] flex items-center justify-center">
-                    <div className="absolute inset-0 bg-[#ffffff15] mix-blend-overlay">
-                      <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                        <pattern id="dotted" x="0" y="0" width="10" height="10" patternUnits="userSpaceOnUse">
-                          <circle fill="#ffffff" cx="2" cy="2" r="1.5"></circle>
-                        </pattern>
-                        <rect x="0" y="0" width="100%" height="100%" fill="url(#dotted)"></rect>
-                      </svg>
-                    </div>
 
-                    <GlobeTracker markers={regionalInsights.markers} />
-
-                    <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/3">
-                      <button
-                        onClick={() => setIsGlobeModalOpen(true)}
-                        className="w-14 h-14 rounded-xl bg-[#2e23b2] text-white flex items-center justify-start pl-4 shadow-xl hover:bg-[#20188b] transition-colors overflow-hidden"
-                      >
-                        <span className="text-2xl font-light leading-none mb-1">+</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </section>
             </>
           )}
 
@@ -918,46 +845,15 @@ export default function AdminPage() {
             <UserLogsPanel
               key={selectedUser.uid}
               user={selectedUser}
+              allUsers={filteredUsers}
+              onSelectUser={(uid) => setSelectedUserId(uid)}
               onBackToList={() => setActiveSection("dashboard")}
             />
           )}
         </div>
       </div>
 
-      {isGlobeModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm p-4 md:p-12">
-          <div className="relative w-full max-w-5xl aspect-square max-h-full bg-[#1a2236] rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-            <div className="absolute inset-0 bg-[#ffffff0a] mix-blend-overlay">
-              <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-                <pattern id="dotted-large" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                  <circle fill="#ffffff" cx="4" cy="4" r="2"></circle>
-                </pattern>
-                <rect x="0" y="0" width="100%" height="100%" fill="url(#dotted-large)"></rect>
-              </svg>
-            </div>
 
-            <button
-              onClick={() => setIsGlobeModalOpen(false)}
-              className="absolute top-6 right-6 z-10 p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
-            >
-              <X size={24} />
-            </button>
-
-            <div className="absolute top-8 left-8 z-10 max-w-sm pointer-events-none">
-              <h2 className="text-2xl font-black uppercase text-white tracking-widest drop-shadow-md">
-                Global Network Matrix
-              </h2>
-              <p className="text-indigo-200 mt-2 font-medium leading-relaxed drop-shadow">
-                Live visualization of distributed access points based on the latest {regionalInsights.totalUsers} session nodes.
-              </p>
-            </div>
-
-            <div className="flex-1 w-full relative">
-              <FullScreenGlobe markers={regionalInsights.markers} />
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -1015,9 +911,13 @@ function StatCard({
 
 function UserLogsPanel({
   user,
+  allUsers,
+  onSelectUser,
   onBackToList,
 }: {
   user: AdminUser;
+  allUsers: AdminUser[];
+  onSelectUser: (uid: string) => void;
   onBackToList: () => void;
 }) {
   const [activityPage, setActivityPage] = useState(1);
@@ -1039,182 +939,210 @@ function UserLogsPanel({
   const currentIpItems = ipRows.slice((ipPage - 1) * itemsPerPage, ipPage * itemsPerPage);
 
   return (
-    <div className="space-y-4">
-      {highRiskCount > 0 && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
-          Security Warning: {highRiskCount} high-risk IP event(s) detected for this user.
+    <div className="grid lg:grid-cols-[280px_1fr] gap-6">
+      {/* User Sidebar */}
+      <aside className="bg-white border border-slate-200 rounded-2xl flex flex-col h-[calc(100vh-12rem)] overflow-hidden shadow-sm">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Security Nodes</h3>
         </div>
-      )}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+          {allUsers.map((u) => (
+            <button
+              key={u.uid}
+              onClick={() => onSelectUser(u.uid)}
+              className={`w-full text-left p-3 rounded-xl transition-all flex items-center gap-3 group ${u.uid === user.uid
+                  ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                  : "hover:bg-slate-50 text-slate-600"
+                }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-[10px] font-black ${u.uid === user.uid ? "bg-white/20" : "bg-slate-100"
+                }`}>
+                {(u.displayName || "A").slice(0, 1).toUpperCase()}
+              </div>
+              <div className="overflow-hidden">
+                <p className={`text-xs font-bold truncate ${u.uid === user.uid ? "text-white" : "text-slate-900"}`}>
+                  {u.displayName || "Anonymous"}
+                </p>
+                <p className={`text-[10px] truncate ${u.uid === user.uid ? "text-white/60" : "text-slate-400"}`}>
+                  {u.email || u.uid.slice(0, 8)}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </aside>
 
-      <button
-        onClick={onBackToList}
-        className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-500 hover:text-slate-800"
-      >
-        <ArrowLeft size={14} />
-        Back to user list
-      </button>
-
-      <section className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-xl font-black text-slate-700">
-            {(user.displayName || "A").slice(0, 1).toUpperCase()}
+      <div className="space-y-4">
+        {highRiskCount > 0 && (
+          <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold">
+            Security Warning: {highRiskCount} high-risk IP event(s) detected for this user.
           </div>
-          <div>
-            <h2 className="text-3xl font-black text-slate-900">{user.displayName || "Anonymous User"}</h2>
-            <p className="text-sm text-slate-600">{user.role} - Security Account</p>
-            <div className="flex items-center gap-2 mt-2">
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Tier 1 Access</span>
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">Remote Certified</span>
+        )}
+
+
+
+        <section className="bg-white border border-slate-200 rounded-2xl p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 rounded-xl bg-slate-200 flex items-center justify-center text-xl font-black text-slate-700">
+              {(user.displayName || "A").slice(0, 1).toUpperCase()}
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-slate-900">{user.displayName || "Anonymous User"}</h2>
+              <p className="text-sm text-slate-600">{user.role} - Security Account</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">Tier 1 Access</span>
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-700">Remote Certified</span>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="px-4 py-2 rounded-lg border border-rose-200 text-rose-700 text-sm font-semibold hover:bg-rose-50">
-            Revoke Access
-          </button>
-          <button className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700">
-            Ban User
-          </button>
-        </div>
-      </section>
+          <div className="flex items-center gap-2">
+            <button className="px-4 py-2 rounded-lg border border-rose-200 text-rose-700 text-sm font-semibold hover:bg-rose-50">
+              Revoke Access
+            </button>
+            <button className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700">
+              Ban User
+            </button>
+          </div>
+        </section>
 
-      <div className="grid lg:grid-cols-[1fr_280px] gap-4">
-        <section className="bg-white border border-slate-200 rounded-2xl p-5">
-          <h3 className="font-bold text-slate-900 mb-4">Detailed Information</h3>
-          <div className="grid md:grid-cols-2 gap-y-5 gap-x-8 text-sm">
-            <InfoBlock label="Email Address" value={user.email || "No email"} />
-            <InfoBlock label="Department" value="Global Internal Audit & Compliance" />
-            <InfoBlock label="Administrative Role" value={user.role} />
-            <InfoBlock label="Date Joined" value={formatDate(user.createdAt)} />
-            <InfoBlock label="Last Log In IP" value={user.ipAddress ?? "Not tracked"} />
-            <InfoBlock label="Credential Status" value={user.isBanned ? "Suspended" : "MFA Enabled"} />
-          </div>
-        </section>
-        <section className="bg-[#eaf1fb] border border-slate-200 rounded-2xl p-5">
-          <h3 className="font-bold text-slate-900 mb-4">Access Controls</h3>
-          <ToggleRow title="Write Permissions" subtitle="Allow edits to audit logs" enabled />
-          <ToggleRow title="Sensitive Data Export" subtitle="Allow bulk CSV downloads" enabled={false} />
-          <ToggleRow title="Terminal Access" subtitle="Enable command-line interface" enabled />
-          <button className="w-full mt-5 py-2.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-indigo-700">
-            Apply Changes
-          </button>
-        </section>
-      </div>
+        <div className="grid lg:grid-cols-[1fr_280px] gap-4">
+          <section className="bg-white border border-slate-200 rounded-2xl p-5">
+            <h3 className="font-bold text-slate-900 mb-4">Detailed Information</h3>
+            <div className="grid md:grid-cols-2 gap-y-5 gap-x-8 text-sm">
+              <InfoBlock label="Email Address" value={user.email || "No email"} />
+              <InfoBlock label="Department" value="Global Internal Audit & Compliance" />
+              <InfoBlock label="Administrative Role" value={user.role} />
+              <InfoBlock label="Date Joined" value={formatDate(user.createdAt)} />
+              <InfoBlock label="Last Log In IP" value={user.ipAddress ?? "Not tracked"} />
+              <InfoBlock label="Credential Status" value={user.isBanned ? "Suspended" : "MFA Enabled"} />
+            </div>
+          </section>
+          <section className="bg-[#eaf1fb] border border-slate-200 rounded-2xl p-5">
+            <h3 className="font-bold text-slate-900 mb-4">Access Controls</h3>
+            <ToggleRow title="Write Permissions" subtitle="Allow edits to audit logs" enabled />
+            <ToggleRow title="Sensitive Data Export" subtitle="Allow bulk CSV downloads" enabled={false} />
+            <ToggleRow title="Terminal Access" subtitle="Enable command-line interface" enabled />
+            <button className="w-full mt-5 py-2.5 rounded-lg bg-white border border-slate-200 text-xs font-semibold text-indigo-700">
+              Apply Changes
+            </button>
+          </section>
+        </div>
 
-      <div className="grid lg:grid-cols-[1fr_320px] gap-4">
-        <section className="bg-white border border-slate-200 rounded-2xl p-5">
-          <h3 className="font-bold text-slate-900 mb-4">Security & Activity History</h3>
-          <div className="space-y-3">
-            {user.activityHistory.length === 0 ? (
-              <p className="text-xs text-slate-500">No real activity events available for this user yet.</p>
-            ) : (
-              <>
-                {currentActivityItems.map((log) => (
-                  <div key={`${log.title}-${log.timestamp}`} className="border border-slate-100 rounded-xl p-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-slate-800">{log.title}</p>
-                      <p className="text-[11px] uppercase font-semibold text-slate-400">
-                        {formatRelativeTime(log.timestamp)}
-                      </p>
+        <div className="grid lg:grid-cols-[1fr_320px] gap-4">
+          <section className="bg-white border border-slate-200 rounded-2xl p-5">
+            <h3 className="font-bold text-slate-900 mb-4">Security & Activity History</h3>
+            <div className="space-y-3">
+              {user.activityHistory.length === 0 ? (
+                <p className="text-xs text-slate-500">No real activity events available for this user yet.</p>
+              ) : (
+                <>
+                  {currentActivityItems.map((log) => (
+                    <div key={`${log.title}-${log.timestamp}`} className="border border-slate-100 rounded-xl p-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-slate-800">{log.title}</p>
+                        <p className="text-[11px] uppercase font-semibold text-slate-400">
+                          {formatRelativeTime(log.timestamp)}
+                        </p>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">{log.description}</p>
+                      <span
+                        className={`inline-flex mt-2 px-2 py-0.5 rounded text-[10px] font-semibold ${log.status === "Malicious"
+                          ? "bg-rose-100 text-rose-700"
+                          : log.status === "Critical"
+                            ? "bg-orange-100 text-orange-700"
+                            : log.status === "Warning"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-indigo-100 text-indigo-700"
+                          }`}
+                      >
+                        {log.status}
+                      </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">{log.description}</p>
-                    <span
-                      className={`inline-flex mt-2 px-2 py-0.5 rounded text-[10px] font-semibold ${log.status === "Malicious"
-                        ? "bg-rose-100 text-rose-700"
-                        : log.status === "Critical"
-                          ? "bg-orange-100 text-orange-700"
-                          : log.status === "Warning"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-indigo-100 text-indigo-700"
-                        }`}
-                    >
-                      {log.status}
-                    </span>
-                  </div>
-                ))}
-                {totalActivityPages > 1 && (
-                  <div className="flex items-center justify-between mt-4">
-                    <button
-                      onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
-                      disabled={activityPage === 1}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-xs font-semibold text-slate-500">
-                      Page {activityPage} of {totalActivityPages}
-                    </span>
-                    <button
-                      onClick={() => setActivityPage((p) => Math.min(totalActivityPages, p + 1))}
-                      disabled={activityPage === totalActivityPages}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </section>
-        <section className="bg-white border border-slate-200 rounded-2xl p-5">
-          <h3 className="font-bold text-slate-900 mb-4">IP Access Log</h3>
-          <div className="space-y-2">
-            {ipRows.length === 0 ? (
-              <p className="text-xs text-slate-500">No tracked IP sessions for this user yet.</p>
-            ) : (
-              <>
-                {currentIpItems.map((row) => (
-                  <div key={`${row.ipAddress}-${row.seenAt}`} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 text-xs border border-slate-100 rounded-lg p-2.5">
-                    <div>
-                      <p className="font-mono text-slate-700">{row.ipAddress}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(row.seenAt, true)}</p>
+                  ))}
+                  {totalActivityPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <button
+                        onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                        disabled={activityPage === 1}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-xs font-semibold text-slate-500">
+                        Page {activityPage} of {totalActivityPages}
+                      </span>
+                      <button
+                        onClick={() => setActivityPage((p) => Math.min(totalActivityPages, p + 1))}
+                        disabled={activityPage === totalActivityPages}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                      >
+                        Next
+                      </button>
                     </div>
-                    <div>
-                      <p className="text-slate-500">{row.location}</p>
-                      {row.riskReason && row.status !== "Trusted" && (
-                        <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{row.riskReason}</p>
-                      )}
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+          <section className="bg-white border border-slate-200 rounded-2xl p-5">
+            <h3 className="font-bold text-slate-900 mb-4">IP Access Log</h3>
+            <div className="space-y-2">
+              {ipRows.length === 0 ? (
+                <p className="text-xs text-slate-500">No tracked IP sessions for this user yet.</p>
+              ) : (
+                <>
+                  {currentIpItems.map((row) => (
+                    <div key={`${row.ipAddress}-${row.seenAt}`} className="grid grid-cols-[1fr_1fr_auto] items-center gap-2 text-xs border border-slate-100 rounded-lg p-2.5">
+                      <div>
+                        <p className="font-mono text-slate-700">{row.ipAddress}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{formatDate(row.seenAt, true)}</p>
+                      </div>
+                      <div>
+                        <p className="text-slate-500">{row.location}</p>
+                        {row.riskReason && row.status !== "Trusted" && (
+                          <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-2">{row.riskReason}</p>
+                        )}
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 rounded font-semibold ${row.status === "Malicious"
+                          ? "bg-rose-100 text-rose-700"
+                          : row.status === "Critical"
+                            ? "bg-orange-100 text-orange-700"
+                            : row.status === "Warning"
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-indigo-100 text-indigo-700"
+                          }`}
+                      >
+                        {row.status}
+                      </span>
                     </div>
-                    <span
-                      className={`px-2 py-0.5 rounded font-semibold ${row.status === "Malicious"
-                        ? "bg-rose-100 text-rose-700"
-                        : row.status === "Critical"
-                          ? "bg-orange-100 text-orange-700"
-                          : row.status === "Warning"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-indigo-100 text-indigo-700"
-                        }`}
-                    >
-                      {row.status}
-                    </span>
-                  </div>
-                ))}
-                {totalIpPages > 1 && (
-                  <div className="flex items-center justify-between mt-4">
-                    <button
-                      onClick={() => setIpPage((p) => Math.max(1, p - 1))}
-                      disabled={ipPage === 1}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
-                    >
-                      Previous
-                    </button>
-                    <span className="text-xs font-semibold text-slate-500">
-                      Page {ipPage} of {totalIpPages}
-                    </span>
-                    <button
-                      onClick={() => setIpPage((p) => Math.min(totalIpPages, p + 1))}
-                      disabled={ipPage === totalIpPages}
-                      className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
-                    >
-                      Next
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </section>
+                  ))}
+                  {totalIpPages > 1 && (
+                    <div className="flex items-center justify-between mt-4">
+                      <button
+                        onClick={() => setIpPage((p) => Math.max(1, p - 1))}
+                        disabled={ipPage === 1}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                      >
+                        Previous
+                      </button>
+                      <span className="text-xs font-semibold text-slate-500">
+                        Page {ipPage} of {totalIpPages}
+                      </span>
+                      <button
+                        onClick={() => setIpPage((p) => Math.min(totalIpPages, p + 1))}
+                        disabled={ipPage === totalIpPages}
+                        className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 disabled:opacity-50 hover:bg-slate-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );

@@ -163,13 +163,17 @@ export async function POST(req: Request) {
           content || "See attached file"
         }".
 
-          Your task:
+          TASK:
           1. Scan the text/image/PDF for any case laws or statutes mentioned.
           2. Identify if the citations are in a standard format (like Bluebook or OSCOLA).
           3. Suggest 2-3 "Better Authorities" (more recent Supreme Court judgments or landmark precedents) that strengthen the specific arguments made in the text.
           4. If a citation is missing or incomplete, provide the correct full citation.
-          5. Present your findings in a clear, bulleted format. 
-          6. Be professional and constructive.
+
+          RETURN A STRICT JSON RESPONSE (no other text):
+          {
+            "analysis": "Markdown formatted audit findings (bullets, bold text, etc.)",
+            "correctedText": "The EXACT full original text provided by the user, but with all citations fixed, formatted correctly, and 'better authorities' integrated into the prose where appropriate. Ensure the legal tone is professional."
+          }
         `;
         break;
 
@@ -219,6 +223,8 @@ export async function POST(req: Request) {
       "gemini-3-flash",
       "gemini-3.1-flash-lite",
       "gemini-3.1-flash-live",
+      "nano-banana-pro",
+      "nano-banana-2",
       "gemini-2.5-pro",
       "gemini-2.5-flash",
       "gemini-2.5-flash-lite",
@@ -242,6 +248,15 @@ export async function POST(req: Request) {
     let text = "";
     let lastError = "";
 
+    // --- HYPER-CONSERVATIVE TOKEN MANAGEMENT ---
+    // User ratio: 1 char ≈ 0.3 tokens. 
+    // We want to keep total tokens (Input + Output) well under model limits.
+    // Max Input Chars: 4000 (~1200 tokens)
+    const MAX_INPUT_CHARS = 4000;
+    const optimizedPrompt = prompt.length > MAX_INPUT_CHARS
+      ? prompt.substring(0, 800) + "\n... [TRUNCATED FOR TOKEN SAFETY] ...\n" + prompt.substring(prompt.length - 3000)
+      : prompt;
+
     // Try Gemini models first
     for (const modelName of geminiModels) {
       try {
@@ -255,56 +270,47 @@ export async function POST(req: Request) {
           ]
         });
 
-        // Set token limit based on model tier to avoid exhaustion
-        let maxTokens = tool === "moot-court" ? (body.role === "evaluator" ? 1500 : 450) : 300;
-        if (modelName.includes("lite") || modelName.includes("mini") || modelName.includes("flash")) {
-          maxTokens = Math.min(maxTokens, 800); // Tighter limits for flash/lite models
-        }
+        // Strict Max Output Tokens
+        let maxTokens = 400;
+        if (body.role === "evaluator") maxTokens = 1200;
+        if (modelName.includes("pro")) maxTokens = Math.min(maxTokens, 1500);
+        if (modelName.includes("flash") || modelName.includes("lite")) maxTokens = Math.min(maxTokens, 450);
 
         const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: maxTokens },
+          contents: [{ role: "user", parts: [{ text: optimizedPrompt }] }],
+          generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
         });
         const response = await result.response;
         text = response.text();
         if (text) break;
       } catch (err: unknown) {
         lastError = err instanceof Error ? err.message : String(err);
-        if (modelName === geminiModels[geminiModels.length - 1]) {
-          console.error(`All Gemini models failed. Switching to OpenAI.`);
-        }
       }
     }
 
-    // Fallback to OpenAI if all Gemini models failed
+    // Fallback to OpenAI
     if (!text && process.env.OPENAI_API_KEY) {
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       for (const modelName of openaiModels) {
         try {
-          let maxTokens = 500;
-          if (modelName.includes("mini") || modelName.includes("codex")) {
-            maxTokens = 300; // Lower limit for mini/codex models
-          }
-          if (modelName.includes("5.4")) maxTokens = 1000;
+          let maxTokens = 400;
+          if (modelName.includes("5.4") && !modelName.includes("mini")) maxTokens = 800;
+          if (modelName.includes("mini") || modelName.includes("codex")) maxTokens = 250;
 
           const completion = await openai.chat.completions.create({
             model: modelName,
-            messages: [{ role: "user", content: prompt }],
+            messages: [{ role: "user", content: optimizedPrompt }],
             max_tokens: maxTokens,
           });
           text = completion.choices[0]?.message?.content || "";
-          if (text) {
-            console.log(`OpenAI fallback succeeded with ${modelName}`);
-            break;
-          }
+          if (text) break;
         } catch (err: unknown) {
           lastError = err instanceof Error ? err.message : String(err);
-          console.warn(`OpenAI model ${modelName} failed:`, lastError);
         }
       }
     }
 
-    // Fallback to DeepSeek if everything else failed
+    // Fallback to DeepSeek
     if (!text && process.env.DEEPSEEK_API_KEY) {
       const deepseek = new OpenAI({ 
         apiKey: process.env.DEEPSEEK_API_KEY,
@@ -313,19 +319,18 @@ export async function POST(req: Request) {
       const deepseekModels = ["deepseek-chat", "deepseek-reasoner"];
       for (const modelName of deepseekModels) {
         try {
+          let maxTokens = 500;
+          if (modelName === "deepseek-reasoner") maxTokens = 1000;
+
           const completion = await deepseek.chat.completions.create({
             model: modelName,
-            messages: [{ role: "user", content: prompt }],
-            max_tokens: 1000,
+            messages: [{ role: "user", content: optimizedPrompt }],
+            max_tokens: maxTokens,
           });
           text = completion.choices[0]?.message?.content || "";
-          if (text) {
-            console.log(`DeepSeek fallback succeeded with ${modelName}`);
-            break;
-          }
+          if (text) break;
         } catch (err: unknown) {
           lastError = err instanceof Error ? err.message : String(err);
-          console.warn(`DeepSeek model ${modelName} failed:`, lastError);
         }
       }
     }

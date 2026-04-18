@@ -153,12 +153,14 @@ function getIpMeta(
   ipAddress: string,
   row?: {
     city?: string | null;
+    region?: string | null;
     country_code?: string | null;
     country?: string | null;
     risk_level?: string | null;
   },
 ): {
   location: string;
+  region: string;
   status: "Trusted" | "Warning" | "Critical" | "Malicious";
 } {
   const ip = ipAddress.trim().toLowerCase();
@@ -170,37 +172,39 @@ function getIpMeta(
     ip.startsWith("::ffff:127.");
 
   if (isLocal) {
-    return { location: "Local/Private", status: "Trusted" };
+    return { location: "Local/Private", region: "Local", status: "Trusted" };
   }
 
   const risk = (row?.risk_level ?? "trusted").toLowerCase();
-  if (risk === "malicious") {
-    return { location: row?.country ?? "Unknown", status: "Malicious" };
-  }
-  if (risk === "critical") {
-    return {
-      location: row?.city && row?.country_code
-        ? `${row.city}, ${row.country_code}`
-        : "Unknown",
-      status: "Critical",
-    };
-  }
-  if (risk === "warning") {
-    return {
-      location: row?.city && row?.country_code
-        ? `${row.city}, ${row.country_code}`
-        : "Unknown",
-      status: "Warning",
-    };
+  const status = risk === "malicious" ? "Malicious" : risk === "critical" ? "Critical" : risk === "warning" ? "Warning" : "Trusted";
+  
+  // Build location string
+  let location = "Unknown";
+  if (row?.city && row?.country_code) {
+    location = `${row.city}, ${row.country_code}`;
+  } else if (row?.region && row?.country_code) {
+    location = `${row.region}, ${row.country_code}`;
+  } else if (row?.country) {
+    location = row.country;
+  } else if (row?.country_code) {
+    location = row.country_code;
   }
 
-  if (row?.city && row?.country_code) {
-    return { location: `${row.city}, ${row.country_code}`, status: "Trusted" };
+  // Determine Region (for UI analytics if needed)
+  let region = "Unknown";
+  const cc = (row?.country_code || row?.country || "").toUpperCase();
+  if (cc) {
+    const NA = new Set(["US", "CA", "MX", "USA", "CANADA"]);
+    const EU = new Set(["GB", "IE", "FR", "DE", "ES", "IT", "NL", "BE", "SE", "NO", "DK", "FI", "CH", "AT", "PL", "PT", "CZ", "HU", "GR", "RO", "UA", "UK", "UNITED KINGDOM", "FRANCE", "GERMANY"]);
+    const AS = new Set(["IN", "CN", "JP", "KR", "SG", "MY", "TH", "VN", "ID", "AE", "SA", "PK", "BD", "LK", "NP", "INDIA", "CHINA", "JAPAN"]);
+    
+    if (NA.has(cc)) region = "NA";
+    else if (EU.has(cc)) region = "EU";
+    else if (AS.has(cc)) region = "AS";
+    else region = "Other";
   }
-  if (row?.country) {
-    return { location: row.country, status: "Trusted" };
-  }
-  return { location: "Unknown", status: "Trusted" };
+
+  return { location, region, status };
 }
 
 export async function GET(req: Request) {
