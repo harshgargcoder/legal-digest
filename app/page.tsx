@@ -11,6 +11,7 @@ import NewsFeed from "./components/news/NewsFeed";
 import NewsletterCTA from "./components/NewsLetterCTA";
 import TrendingSidebar from "./components/TrendingSidebar";
 import PersonalizationModal from "./components/auth/PersonalizationModal";
+import MootCourtLeaderboard from "./components/MootCourtLeaderboard";
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -64,7 +65,7 @@ function HomeContent() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 pt-32 pb-8 min-h-screen bg-gray-50 dark:bg-slate-950">
+    <div className="max-w-[1440px] mx-auto px-4 pt-32 pb-8 min-h-screen bg-gray-50 dark:bg-slate-950">
 
       {/* CATEGORY FILTER */}
       <CategoryFilter
@@ -72,14 +73,21 @@ function HomeContent() {
         setCategory={setCategory}
       />
 
-      {/* NEWS + SIDEBAR */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10 mt-10">
+      {/* THREE-COLUMN LAYOUT: LEADERBOARD | NEWS | SIDEBAR */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-10">
 
-        <div className="lg:col-span-2">
+        {/* LEFT: LEADERBOARD */}
+        <aside className="lg:col-span-3 lg:sticky lg:top-32 self-start order-2 lg:order-1">
+          <MootCourtLeaderboard />
+        </aside>
+
+        {/* CENTER: NEWS FEED */}
+        <div className="lg:col-span-6 order-1 lg:order-2">
           <NewsFeed category={category} search={search} preferences={preferences} />
         </div>
 
-        <aside className="hidden lg:block">
+        {/* RIGHT: SIDEBAR */}
+        <aside className="lg:col-span-3 order-3">
           <TrendingSidebar setSearch={setSearch} />
         </aside>
 

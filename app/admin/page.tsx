@@ -897,11 +897,11 @@ export default function AdminPage() {
                         <rect x="0" y="0" width="100%" height="100%" fill="url(#dotted)"></rect>
                       </svg>
                     </div>
-                    
+
                     <GlobeTracker markers={regionalInsights.markers} />
-                    
+
                     <div className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/3">
-                      <button 
+                      <button
                         onClick={() => setIsGlobeModalOpen(true)}
                         className="w-14 h-14 rounded-xl bg-[#2e23b2] text-white flex items-center justify-start pl-4 shadow-xl hover:bg-[#20188b] transition-colors overflow-hidden"
                       >
@@ -935,8 +935,8 @@ export default function AdminPage() {
                 <rect x="0" y="0" width="100%" height="100%" fill="url(#dotted-large)"></rect>
               </svg>
             </div>
-            
-            <button 
+
+            <button
               onClick={() => setIsGlobeModalOpen(false)}
               className="absolute top-6 right-6 z-10 p-3 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors"
             >
@@ -951,7 +951,7 @@ export default function AdminPage() {
                 Live visualization of distributed access points based on the latest {regionalInsights.totalUsers} session nodes.
               </p>
             </div>
-            
+
             <div className="flex-1 w-full relative">
               <FullScreenGlobe markers={regionalInsights.markers} />
             </div>

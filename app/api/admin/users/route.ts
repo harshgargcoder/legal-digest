@@ -60,7 +60,9 @@ function getRequestIp(req: Request) {
 
 function isHardBlockedIp(ipAddress: string | null) {
   if (!ipAddress) return false;
-  const raw = `${process.env.MALICIOUS_IPS ?? ""},${process.env.BLOCKED_IPS ?? ""}`;
+  const raw = `${process.env.MALICIOUS_IPS ?? ""},${
+    process.env.BLOCKED_IPS ?? ""
+  }`;
   const set = new Set(raw.split(",").map((s) => s.trim()).filter(Boolean));
   return set.has(ipAddress);
 }
@@ -85,7 +87,9 @@ async function requireAdmin(req: Request): Promise<AdminContext> {
   const auth = getAdminAuth();
   const decoded = await auth.verifyIdToken(token);
   const fromClaim = decoded.admin === true || decoded.role === "Admin";
+  console.log("UID:", decoded.uid);
   const fromDb = await isSupabaseAdmin(decoded.uid);
+  console.log("FROM DB:", fromDb);
 
   if (!fromClaim && !fromDb) {
     throw new ResponseError("Forbidden", 403);
@@ -140,8 +144,8 @@ function percentOf(value: number, max: number) {
 function stdDev(values: number[]) {
   if (!values.length) return 0;
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
-  const variance =
-    values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
+  const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
+    values.length;
   return Math.sqrt(variance);
 }
 
@@ -153,10 +157,12 @@ function getIpMeta(
     country?: string | null;
     risk_level?: string | null;
   },
-): { location: string; status: "Trusted" | "Warning" | "Critical" | "Malicious" } {
+): {
+  location: string;
+  status: "Trusted" | "Warning" | "Critical" | "Malicious";
+} {
   const ip = ipAddress.trim().toLowerCase();
-  const isLocal =
-    ip === "127.0.0.1" ||
+  const isLocal = ip === "127.0.0.1" ||
     ip === "::1" ||
     ip.startsWith("10.") ||
     ip.startsWith("192.168.") ||
@@ -173,13 +179,17 @@ function getIpMeta(
   }
   if (risk === "critical") {
     return {
-      location: row?.city && row?.country_code ? `${row.city}, ${row.country_code}` : "Unknown",
+      location: row?.city && row?.country_code
+        ? `${row.city}, ${row.country_code}`
+        : "Unknown",
       status: "Critical",
     };
   }
   if (risk === "warning") {
     return {
-      location: row?.city && row?.country_code ? `${row.city}, ${row.country_code}` : "Unknown",
+      location: row?.city && row?.country_code
+        ? `${row.city}, ${row.country_code}`
+        : "Unknown",
       status: "Warning",
     };
   }
@@ -233,7 +243,8 @@ export async function GET(req: Request) {
     );
 
     let ipTracking = false;
-    let ipNote = "IP is not tracked in current schema. Add IP logging on sign-in/events to show it here.";
+    let ipNote =
+      "IP is not tracked in current schema. Add IP logging on sign-in/events to show it here.";
     const ipByUser = new Map<string, string>();
     const ipRiskByUser = new Map<string, string>();
     const ipRiskReasonByUser = new Map<string, string | null>();
@@ -245,7 +256,9 @@ export async function GET(req: Request) {
 
     const ipQueryWithGeo = await supabase
       .from("user_ip_logs")
-      .select("user_id, ip_address, seen_at, city, region, country, country_code, risk_level, risk_reason")
+      .select(
+        "user_id, ip_address, seen_at, city, region, country, country_code, risk_level, risk_reason",
+      )
       .order("seen_at", { ascending: false })
       .limit(5000);
 
@@ -302,21 +315,19 @@ export async function GET(req: Request) {
 
         const activity = activityHistoryByUser.get(row.user_id)!;
         if (activity.length < 25) {
-          const title =
-            meta.status === "Malicious"
-              ? "Malicious IP Activity"
-              : meta.status === "Critical"
-                ? "Critical Risk Login Pattern"
-                : meta.status === "Warning"
-                  ? "Suspicious Login Pattern"
-                  : "Session Authenticated";
+          const title = meta.status === "Malicious"
+            ? "Malicious IP Activity"
+            : meta.status === "Critical"
+            ? "Critical Risk Login Pattern"
+            : meta.status === "Warning"
+            ? "Suspicious Login Pattern"
+            : "Session Authenticated";
 
-          const description =
-            meta.status === "Trusted"
-              ? `Login/session seen from ${row.ip_address} (${meta.location}).`
-              : row.risk_reason
-                ? `${row.risk_reason} IP: ${row.ip_address} (${meta.location}).`
-                : `Risk signal detected from ${row.ip_address} (${meta.location}).`;
+          const description = meta.status === "Trusted"
+            ? `Login/session seen from ${row.ip_address} (${meta.location}).`
+            : row.risk_reason
+            ? `${row.risk_reason} IP: ${row.ip_address} (${meta.location}).`
+            : `Risk signal detected from ${row.ip_address} (${meta.location}).`;
 
           activity.push({
             title,
@@ -327,10 +338,9 @@ export async function GET(req: Request) {
         }
       }
       ipTracking = true;
-      ipNote =
-        ipData.length > 0
-          ? "IP addresses shown are tracked from real user sessions."
-          : "IP tracking is enabled. Session data will appear after users log in.";
+      ipNote = ipData.length > 0
+        ? "IP addresses shown are tracked from real user sessions."
+        : "IP tracking is enabled. Session data will appear after users log in.";
     } else if (ipError) {
       ipTracking = false;
       ipNote =
@@ -353,8 +363,8 @@ export async function GET(req: Request) {
     const users = firebaseUsers
       .map((fUser) => {
         const pref = prefMap.get(fUser.uid);
-        const creationTime =
-          pref?.createdAt ?? fUser.metadata.creationTime ?? null;
+        const creationTime = pref?.createdAt ?? fUser.metadata.creationTime ??
+          null;
         const lastActivityDate = lastActivityMap.get(fUser.uid) ?? null;
 
         return {
@@ -401,16 +411,15 @@ export async function GET(req: Request) {
     const sevenDaysAgoKey = dateKey(7);
     const fourteenDaysAgoKey = dateKey(14);
 
-    const signupsCurrent7d = createdAtDates.filter((d) => d >= sevenDaysAgoKey).length;
+    const signupsCurrent7d = createdAtDates.filter((d) =>
+      d >= sevenDaysAgoKey
+    ).length;
     const signupsPrev7d = createdAtDates.filter(
       (d) => d >= fourteenDaysAgoKey && d < sevenDaysAgoKey,
     ).length;
-    const growthPctRaw =
-      signupsPrev7d === 0
-        ? signupsCurrent7d > 0
-          ? 100
-          : 0
-        : ((signupsCurrent7d - signupsPrev7d) / signupsPrev7d) * 100;
+    const growthPctRaw = signupsPrev7d === 0
+      ? signupsCurrent7d > 0 ? 100 : 0
+      : ((signupsCurrent7d - signupsPrev7d) / signupsPrev7d) * 100;
     const growthPct = Math.round(growthPctRaw);
 
     const activeByDate = new Map<string, Set<string>>();
@@ -426,16 +435,20 @@ export async function GET(req: Request) {
       const key = dateKey(6 - idx);
       return activeByDate.get(key)?.size ?? 0;
     });
-    const avgDailyActive =
-      last7DaysCounts.reduce((sum, value) => sum + value, 0) /
+    const avgDailyActive = last7DaysCounts.reduce((sum, value) =>
+      sum + value, 0) /
       Math.max(last7DaysCounts.length, 1);
     const activityStdDev = stdDev(last7DaysCounts);
-    const stabilityScore =
-      avgDailyActive > 0 ? Math.max(0, 100 - (activityStdDev / avgDailyActive) * 100) : 0;
+    const stabilityScore = avgDailyActive > 0
+      ? Math.max(0, 100 - (activityStdDev / avgDailyActive) * 100)
+      : 0;
 
     const bannedRatio = users.length > 0 ? bannedUsers / users.length : 0;
-    const flaggedSeverity =
-      bannedRatio >= 0.1 ? "Critical" : bannedRatio >= 0.03 ? "Elevated" : "Healthy";
+    const flaggedSeverity = bannedRatio >= 0.1
+      ? "Critical"
+      : bannedRatio >= 0.03
+      ? "Elevated"
+      : "Healthy";
 
     const cardMetrics: {
       totalUsers: CardMetric;
@@ -448,12 +461,11 @@ export async function GET(req: Request) {
         barPercent: clampPercent(percentOf(users.length, 5000)),
       },
       activeSessions: {
-        badgeText:
-          stabilityScore >= 80
-            ? "Stable"
-            : stabilityScore >= 55
-              ? "Fluctuating"
-              : "Volatile",
+        badgeText: stabilityScore >= 80
+          ? "Stable"
+          : stabilityScore >= 55
+          ? "Fluctuating"
+          : "Volatile",
         footerText: `Avg ${avgDailyActive.toFixed(1)}/day`,
         barPercent: clampPercent(stabilityScore),
       },

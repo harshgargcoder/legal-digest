@@ -1,55 +1,56 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
+import { onAuthStateChanged, signOut, type User as FirebaseUser } from "firebase/auth";
+import { Bell, Bookmark as BookmarkIcon, Boxes, ChevronDown, ExternalLink, LayoutDashboard, LogOut, Moon, Network, Sun, User, Users, X } from "lucide-react";
+
 import AuthModal from "./auth/AuthModal";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
 import { useSearch } from "@/app/context/SearchContext";
 import { useNotifications } from "@/app/context/NotificationContext";
 import { useTheme } from "@/app/context/ThemeContext";
-import { User, LogOut, LayoutDashboard, Bookmark as BookmarkIcon, ChevronDown, Users, Bell, Network, ExternalLink, X, Boxes, ShieldCheck, Sun, Moon } from "lucide-react";
+
+interface NewsResult {
+  title: string;
+  source: string;
+  url: string;
+}
+
+interface NotificationItem {
+  id: string;
+  title: string;
+  published_at: string;
+  url: string;
+  source: string;
+}
 
 export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { search, setSearch } = useSearch();
-  const { 
-    notifications, 
-    unreadCount, 
-    loading: notificationsLoading, 
+  const {
+    notifications,
+    unreadCount,
+    loading: notificationsLoading,
     markAllAsRead,
     notificationsEnabled,
-    toggleNotifications
+    toggleNotifications,
   } = useNotifications();
-  const [mounted, setMounted] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
+  const [mounted, setMounted] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const { theme, toggleTheme } = useTheme();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => {
-      window.removeEventListener("scroll", handleScroll);
-    };
-  }, []);
-
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<NewsResult[]>([]);
   const [loading, setLoading] = useState(false);
 
   const desktopSearchRef = useRef<HTMLDivElement>(null);
@@ -58,18 +59,29 @@ export default function Navbar() {
   const notificationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        try {
-          const res = await fetch(`/api/user-preferences?userId=${currentUser.uid}`);
-          const data = await res.json();
-          setIsAdmin(data.preferences?.role === "Admin");
-        } catch (err) {
-          console.error("Error fetching role for navbar:", err);
-        }
-      } else {
+      if (!currentUser) {
         setIsAdmin(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/user-preferences?userId=${currentUser.uid}`);
+        const data = await res.json();
+        setIsAdmin(data.preferences?.role === "Admin");
+      } catch (err) {
+        console.error("Error fetching role for navbar:", err);
       }
     });
 
@@ -88,32 +100,26 @@ export default function Navbar() {
       }
 
       setLoading(true);
-
       try {
-        const res = await fetch(
-          `/api/get-news?search=${encodeURIComponent(search)}&limit=5`
-        );
+        const res = await fetch(`/api/get-news?search=${encodeURIComponent(search)}&limit=5`);
         const data = await res.json();
-        if (data.success) setResults(data.articles || []);
-        else setResults([]);
+        setResults(data.success ? data.articles || [] : []);
       } catch {
         setResults([]);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
-    const debounce = setTimeout(fetchResults, 300);
+    const debounce = setTimeout(fetchResults, 250);
     return () => clearTimeout(debounce);
   }, [search]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (
-        (desktopSearchRef.current && !desktopSearchRef.current.contains(target)) &&
-        (mobileSearchRef.current && !mobileSearchRef.current.contains(target))
-      ) {
+
+      if ((desktopSearchRef.current && !desktopSearchRef.current.contains(target)) && (mobileSearchRef.current && !mobileSearchRef.current.contains(target))) {
         setResults([]);
       }
       if (userDropdownRef.current && !userDropdownRef.current.contains(target)) {
@@ -125,8 +131,7 @@ export default function Navbar() {
     };
 
     document.addEventListener("click", handleClickOutside);
-    return () =>
-      document.removeEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
   const handleLogout = async () => {
@@ -135,190 +140,55 @@ export default function Navbar() {
     router.refresh();
   };
 
+  if (!mounted) return null;
+
   return (
     <>
-      <div className="fixed top-0 w-full z-[1000] px-4 pt-4 sm:pt-6 flex justify-center pointer-events-none">
+      <div className="pointer-events-none fixed inset-x-0 top-0 z-[1000] flex justify-center px-3 pt-3 sm:px-4 sm:pt-4">
         <nav
-          className={`pointer-events-auto transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] flex items-center justify-between shadow-[0_8px_30px_rgb(0,0,0,0.08)] backdrop-blur-xl border border-gray-200/40 dark:border-slate-700/40 bg-white/40 dark:bg-slate-900/60
-            ${scrolled
-              ? "w-full max-w-4xl py-2 px-5 rounded-full"
-              : "w-full max-w-7xl py-3 px-6 rounded-3xl"}
-          `}
+          className={`pointer-events-auto flex w-full items-center justify-between gap-3 rounded-[1.5rem] border border-slate-200/80 bg-white/90 px-3 py-3 text-slate-900 shadow-[0_14px_40px_rgba(15,23,42,0.08)] backdrop-blur-xl transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] ${
+            scrolled ? "max-w-[1360px]" : "max-w-[1480px]"
+          }`}
         >
-          {/* Logo */}
-          <div className="flex-shrink-0 flex items-center">
+          <div className="flex flex-shrink-0 items-center">
             <Image
               src="/new_logo.png"
               alt="Legal Digest"
-              width={scrolled ? 70 : 80}
-              height={scrolled ? 30 : 40}
-              className="cursor-pointer transition-all duration-300 h-auto"
+              width={scrolled ? 72 : 84}
+              height={scrolled ? 32 : 40}
+              className="h-auto cursor-pointer transition-all duration-300"
               onClick={() => {
-                if (pathname === "/") {
-                  window.scrollTo({ top: 0, behavior: "smooth" });
-                } else {
-                  router.push("/");
-                }
+                if (pathname === "/") window.scrollTo({ top: 0, behavior: "smooth" });
+                else router.push("/");
               }}
             />
           </div>
 
-          {/* Desktop Search & Actions */}
-          <div className="hidden lg:flex items-center gap-6 flex-1 justify-end">
-
-            <Link href="/graph" className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center gap-2">
-              <Network size={16} /> Topology
-            </Link>
-
-            <Link href="/community" className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center gap-2">
-              <Users size={16} /> Community
-            </Link>
-
-            <Link href="/toolkit" className="text-sm font-semibold text-slate-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition flex items-center gap-2">
-              <Boxes size={16} /> Toolkit
-            </Link>
-
-            {/* Dark Mode Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2.5 rounded-full border border-gray-200/70 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 transition-all duration-300 shadow-sm group cursor-pointer"
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            >
-              {theme === "dark" ? (
-                <Sun size={18} className="text-amber-400 group-hover:text-amber-300 transition-colors" />
-              ) : (
-                <Moon size={18} className="text-gray-600 group-hover:text-indigo-600 transition-colors" />
-              )}
-            </button>
-
-            {/* Notifications */}
-            <div className="relative" ref={notificationRef}>
-              <button
-                onClick={() => {
-                  setNotificationOpen(!notificationOpen);
-                  if (!notificationOpen) markAllAsRead();
-                }}
-                className="p-2.5 rounded-full border border-gray-200/70 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 transition-all duration-300 shadow-sm relative group"
-              >
-                <Bell size={18} className="text-gray-600 group-hover:text-indigo-600 transition-colors" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 text-[10px] items-center justify-center text-white font-bold">
-                      {unreadCount}
-                    </span>
-                  </span>
-                )}
-              </button>
-
-              {notificationOpen && (
-                <div className="absolute top-[calc(100%+12px)] right-0 w-80 bg-white border border-gray-100 rounded-2xl shadow-xl z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-4 py-3 border-b border-gray-100 bg-slate-50 flex justify-between items-center">
-                    <p className="text-sm font-bold text-slate-900">Notifications</p>
-                    <button 
-                      onClick={toggleNotifications}
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold transition-all ${notificationsEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-500'}`}
-                    >
-                      {notificationsEnabled ? 'Push: ON' : 'Push: OFF'}
-                    </button>
-                  </div>
-                  
-                  <div className="max-h-[350px] overflow-y-auto">
-                    {notificationsLoading && notifications.length === 0 ? (
-                      <div className="p-8 flex flex-col items-center justify-center text-center space-y-3">
-                        <div className="w-8 h-8 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
-                        <p className="text-xs text-slate-500">Fetching updates...</p>
-                      </div>
-                    ) : notifications.length > 0 ? (
-                      <div className="divide-y divide-gray-50">
-                        {notifications.map((notif: any) => (
-                          <div 
-                            key={notif.id} 
-                            onClick={() => {
-                              router.push(notif.url);
-                              setNotificationOpen(false);
-                            }}
-                            className="p-4 hover:bg-indigo-50/30 transition cursor-pointer group"
-                          >
-                            <div className="flex justify-between items-start mb-1">
-                              <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{notif.source}</span>
-                              <span className="text-[10px] text-slate-400">{new Date(notif.published_at).toLocaleDateString()}</span>
-                            </div>
-                            <h4 className="text-sm font-semibold text-slate-800 line-clamp-2 group-hover:text-indigo-600 transition-colors">
-                              {notif.title}
-                            </h4>
-                            <div className="flex items-center mt-2 text-indigo-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <span className="text-[10px] font-bold">Read details</span>
-                              <ExternalLink size={10} className="ml-1" />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-10 flex flex-col items-center text-center space-y-4">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center border bg-slate-50 border-slate-100`}>
-                          <Bell size={24} className={'text-slate-400'} />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-slate-800">No new updates</h4>
-                          <p className="text-xs text-slate-500 mt-1 leading-relaxed px-4">
-                            We'll notify you here once new legal rulings or insights are available.
-                          </p>
-                        </div>
-                        {!notificationsEnabled && (
-                          <button
-                            onClick={toggleNotifications}
-                            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 py-1"
-                          >
-                            Enable push alerts
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {notifications.length > 0 && (
-                    <div className="p-2 border-t border-gray-50 bg-gray-50/50">
-                      <button 
-                        onClick={() => router.push('/dashboard')}
-                        className="w-full py-2 text-xs font-bold text-indigo-600 hover:bg-white rounded-lg transition"
-                      >
-                        View Dashboard
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+          <div className="hidden min-w-0 flex-1 items-center justify-end gap-3 xl:flex">
+            <div className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 p-1">
+              <NavLink href="/graph" active={pathname === "/graph"} icon={<Network size={16} />} label="Topology" />
+              <NavLink href="/community" active={pathname === "/community"} icon={<Users size={16} />} label="Community" />
+              <NavLink href="/toolkit" active={pathname.startsWith("/toolkit")} icon={<Boxes size={16} />} label="Toolkit" />
             </div>
 
-            {/* Search */}
-            <div className="relative w-56" ref={desktopSearchRef}>
+            <div className="relative min-w-[260px] max-w-[380px] flex-1" ref={desktopSearchRef}>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search cases..."
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-gray-200/50 dark:border-slate-600 rounded-full pl-9 pr-4 py-1.5 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition-all shadow-inner"
+                placeholder="Search cases, judgments, briefs..."
+                className="h-11 w-full rounded-full border border-slate-200 bg-slate-50 pl-11 pr-10 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
               />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-70">
-                🔎
-              </span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm opacity-80">🔎</span>
               {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded-full transition-colors"
-                >
-                  <X size={14} className="text-gray-400" />
+                <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 transition hover:bg-slate-200">
+                  <X size={14} className="text-slate-400" />
                 </button>
               )}
 
               {search.trim() !== "" && (
-                <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white border border-gray-200 rounded-2xl shadow-xl z-[1100] max-h-80 overflow-y-auto">
-                  {loading && (
-                    <div className="p-3 text-sm text-gray-500">
-                      Searching...
-                    </div>
-                  )}
+                <div className="absolute left-0 top-[calc(100%+10px)] z-[1100] max-h-80 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                  {loading && <div className="p-4 text-sm text-slate-500">Searching...</div>}
                   {!loading &&
                     results.map((item) => (
                       <div
@@ -328,178 +198,236 @@ export default function Navbar() {
                           setSearch("");
                           setResults([]);
                         }}
-                        className="p-3 text-sm cursor-pointer hover:bg-gray-50 text-gray-800"
+                        className="cursor-pointer px-4 py-3 text-sm text-slate-800 transition hover:bg-slate-50"
                       >
-                        <p className="font-medium">{item.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {item.source}
-                        </p>
+                        <p className="font-semibold">{item.title}</p>
+                        <p className="text-xs text-slate-500">{item.source}</p>
                       </div>
                     ))}
                 </div>
               )}
             </div>
 
+            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 p-1.5">
+              <button
+                onClick={toggleTheme}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white transition hover:bg-slate-100"
+                title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              >
+                {theme === "dark" ? <Sun size={17} className="text-amber-400" /> : <Moon size={17} className="text-indigo-600" />}
+              </button>
 
-            {user ? (
-              <div className="relative" ref={userDropdownRef}>
+              <div className="relative" ref={notificationRef}>
                 <button
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="group flex items-center gap-2 pl-2 pr-4 py-1.5 rounded-full border border-gray-200/70 dark:border-slate-600 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-700 transition-all duration-300 shadow-sm"
+                  onClick={() => {
+                    setNotificationOpen(!notificationOpen);
+                    if (!notificationOpen) markAllAsRead();
+                  }}
+                  className="relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white transition hover:bg-slate-100"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white shadow-inner font-bold text-sm flex-shrink-0">
-                    {user.displayName ? user.displayName[0].toUpperCase() : (user.email ? user.email[0].toUpperCase() : "?")}
-                  </div>
-                  <span className="max-w-0 overflow-hidden text-sm font-semibold text-gray-800 dark:text-slate-200 group-hover:max-w-[120px] transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] whitespace-nowrap">
-                    {user.displayName || user.email?.split('@')[0]}
-                  </span>
-                  <ChevronDown size={14} className="text-gray-500 group-hover:text-indigo-500 transition-colors" />
+                  <Bell size={17} className="text-slate-600" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 w-4">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+                      <span className="relative inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                        {unreadCount}
+                      </span>
+                    </span>
+                  )}
                 </button>
 
-                {userDropdownOpen && (
-                  <div className="absolute top-[calc(100%+8px)] right-0 w-56 bg-white border border-gray-100 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-[1100] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                    <div className="px-4 py-3 border-b border-gray-100 bg-slate-50">
-                      <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || user.email}</p>
-                      <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">{isAdmin ? "Admin" : (user.photoURL || "Researcher")}</p>
-                    </div>
-                    <div className="p-2 space-y-1">
-                      <Link href="/profile" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
-                        <User size={16} className="text-indigo-500" /> My Profile
-                      </Link>
-                      <Link href="/dashboard" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
-                        <LayoutDashboard size={16} className="text-indigo-500" /> Dashboard
-                      </Link>
-                      <Link href="/bookmarks" onClick={() => setUserDropdownOpen(false)} className="flex items-center gap-3 px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 rounded-xl transition">
-                        <BookmarkIcon size={16} className="text-indigo-500" /> My Saved Cases
-                      </Link>
-                    </div>
-                    <div className="p-2 border-t border-gray-100">
+                {notificationOpen && (
+                  <div className="absolute right-0 top-[calc(100%+12px)] z-[1100] w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-4 py-3">
+                      <p className="text-sm font-bold text-slate-900">Notifications</p>
                       <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition"
+                        onClick={toggleNotifications}
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition ${
+                          notificationsEnabled ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                        }`}
                       >
-                        <LogOut size={16} /> Logout
+                        {notificationsEnabled ? "Push: ON" : "Push: OFF"}
                       </button>
                     </div>
+
+                    <div className="max-h-[350px] overflow-y-auto">
+                      {notificationsLoading && notifications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center space-y-3 p-8 text-center">
+                          <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+                          <p className="text-xs text-slate-500">Fetching updates...</p>
+                        </div>
+                      ) : notifications.length > 0 ? (
+                        <div className="divide-y divide-slate-100">
+                          {notifications.map((notif: NotificationItem) => (
+                            <div
+                              key={notif.id}
+                              onClick={() => {
+                                router.push(notif.url);
+                                setNotificationOpen(false);
+                              }}
+                              className="cursor-pointer px-4 py-4 transition hover:bg-slate-50"
+                            >
+                              <div className="mb-1 flex items-start justify-between gap-4">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-600">{notif.source}</span>
+                                <span className="text-[10px] text-slate-400">{new Date(notif.published_at).toLocaleDateString()}</span>
+                              </div>
+                              <h4 className="line-clamp-2 text-sm font-semibold text-slate-800 transition hover:text-indigo-600">{notif.title}</h4>
+                              <div className="mt-2 flex items-center text-indigo-600 opacity-0 transition-opacity hover:opacity-100">
+                                <span className="text-[10px] font-bold">Read details</span>
+                                <ExternalLink size={10} className="ml-1" />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center space-y-4 p-10 text-center">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
+                            <Bell size={24} className="text-slate-400" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-bold text-slate-900">No new updates</h4>
+                            <p className="mt-1 px-4 text-xs leading-relaxed text-slate-500">
+                              We&apos;ll notify you here once new legal rulings or insights are available.
+                            </p>
+                          </div>
+                          {!notificationsEnabled && (
+                            <button onClick={toggleNotifications} className="text-xs font-bold text-indigo-600 transition hover:text-indigo-700">
+                              Enable push alerts
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {notifications.length > 0 && (
+                      <div className="border-t border-slate-100 bg-slate-50 p-2">
+                        <button onClick={() => router.push("/dashboard")} className="w-full rounded-xl py-2 text-xs font-bold text-indigo-600 transition hover:bg-white">
+                          View Dashboard
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
-            ) : (
-              <button
-                onClick={() => setAuthOpen(true)}
-                className="px-5 py-2 rounded-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg hover:shadow-indigo-500/25 transition-all font-medium text-sm flex items-center gap-2"
-              >
-                <User size={16} /> Researcher Login
-              </button>
-            )}
+
+              {user ? (
+                <div className="relative" ref={userDropdownRef}>
+                  <button
+                    onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                    className="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1.5 pl-1.5 pr-3 transition hover:bg-slate-50"
+                  >
+                    <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-500 to-violet-500 text-sm font-bold text-white shadow-inner">
+                      {user.displayName ? user.displayName[0].toUpperCase() : user.email ? user.email[0].toUpperCase() : "?"}
+                    </div>
+                    <span className="hidden max-w-[120px] overflow-hidden whitespace-nowrap text-sm font-semibold text-slate-800 2xl:inline">
+                      {user.displayName || user.email?.split("@")[0]}
+                    </span>
+                    <ChevronDown size={14} className="text-slate-400 transition hover:text-slate-600" />
+                  </button>
+
+                  {userDropdownOpen && (
+                    <div className="absolute right-0 top-[calc(100%+10px)] z-[1100] w-56 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                      <div className="border-b border-slate-100 bg-slate-50 px-4 py-3">
+                        <p className="truncate text-sm font-bold text-slate-900">{user.displayName || user.email}</p>
+                        <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">{isAdmin ? "Admin" : user.photoURL || "Researcher"}</p>
+                      </div>
+                      <div className="space-y-1 p-2">
+                        <NavMenuLink href="/profile" label="My Profile" icon={<User size={16} className="text-indigo-500" />} onClick={() => setUserDropdownOpen(false)} />
+                        <NavMenuLink href="/dashboard" label="Dashboard" icon={<LayoutDashboard size={16} className="text-indigo-500" />} onClick={() => setUserDropdownOpen(false)} />
+                        <NavMenuLink href="/bookmarks" label="My Saved Cases" icon={<BookmarkIcon size={16} className="text-indigo-500" />} onClick={() => setUserDropdownOpen(false)} />
+                      </div>
+                      <div className="border-t border-slate-100 p-2">
+                        <button onClick={handleLogout} className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm text-red-600 transition hover:bg-red-50">
+                          <LogOut size={16} /> Logout
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAuthOpen(true)}
+                  className="flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:shadow-lg hover:shadow-indigo-500/20"
+                >
+                  <User size={16} /> Researcher Login
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Mobile Top Section */}
-          <div className="flex items-center gap-3 lg:hidden">
-
-            {/* Search */}
-            <div className="relative w-32" ref={mobileSearchRef}>
+          <div className="flex items-center gap-2 xl:hidden">
+            <div className="relative w-36 sm:w-52 md:w-64" ref={mobileSearchRef}>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search..."
-                className="w-full bg-gray-100 border border-gray-200 rounded-full pl-8 pr-2 py-1.5 text-sm text-gray-800"
+                className="w-full rounded-full border border-slate-200 bg-slate-50 py-2 pl-8 pr-2 text-sm text-slate-900 placeholder:text-slate-400 outline-none"
               />
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm opacity-70">
-                🔎
-              </span>
+              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-sm opacity-70">🔎</span>
               {search && (
-                <button
-                  onClick={() => setSearch("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-gray-200 rounded-full transition-colors"
-                >
-                  <X size={12} className="text-gray-400" />
+                <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-0.5 transition hover:bg-slate-200">
+                  <X size={12} className="text-slate-400" />
                 </button>
               )}
             </div>
 
-            {/* Animated Hamburger */}
-            <button
-              onClick={() => setMenuOpen(!menuOpen)}
-              className="relative w-6 h-6 flex flex-col justify-between"
-            >
-              <span className={`h-0.5 w-full bg-gray-800 dark:bg-slate-200 transition-all duration-300 ${menuOpen ? "rotate-45 translate-y-2.5" : ""}`} />
-              <span className={`h-0.5 w-full bg-gray-800 dark:bg-slate-200 transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
-              <span className={`h-0.5 w-full bg-gray-800 dark:bg-slate-200 transition-all duration-300 ${menuOpen ? "-rotate-45 -translate-y-2.5" : ""}`} />
+            <button onClick={() => setMenuOpen(!menuOpen)} className="flex h-10 w-10 flex-col items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white md:h-11 md:w-11">
+              <span className={`h-0.5 w-4 bg-slate-700 transition-all duration-300 ${menuOpen ? "translate-y-2 rotate-45" : ""}`} />
+              <span className={`h-0.5 w-4 bg-slate-700 transition-all duration-300 ${menuOpen ? "opacity-0" : ""}`} />
+              <span className={`h-0.5 w-4 bg-slate-700 transition-all duration-300 ${menuOpen ? "-translate-y-2 -rotate-45" : ""}`} />
             </button>
           </div>
         </nav>
 
-        {/* Mobile Dropdown */}
         <div
-          className={`absolute top-[calc(100%+8px)] left-0 right-0 mx-auto w-full max-w-md bg-white dark:bg-slate-900 border border-gray-100 dark:border-slate-700 shadow-2xl rounded-3xl overflow-hidden pointer-events-auto transition-all duration-300 z-[1100] ${menuOpen ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"}`}
+          className={`pointer-events-auto absolute left-0 right-0 top-[calc(100%+8px)] mx-auto w-full max-w-md overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl transition-all duration-300 ${
+            menuOpen ? "max-h-[560px] opacity-100" : "max-h-0 opacity-0 pointer-events-none"
+          }`}
         >
           <div className="py-2">
-            <div className="flex flex-col items-start gap-2 text-base font-medium px-4 pt-4">
+            <div className="flex flex-col items-start gap-2 px-4 pt-4 text-base font-medium">
               {user && (
                 <>
-                  <div className="px-4 py-3 mb-2 w-full bg-slate-50 rounded-xl border border-gray-100">
-                    <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || user.email}</p>
-                    <p className="text-xs text-indigo-600 font-bold uppercase tracking-wider">{user.photoURL || "Researcher"}</p>
+                  <div className="mb-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="truncate text-sm font-bold text-slate-900">{user.displayName || user.email}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">{user.photoURL || "Researcher"}</p>
                   </div>
-
-                  <Link href="/profile" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
-                    <User size={18} className="text-indigo-500" /> My Profile
-                  </Link>
-                  <Link href="/graph" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
-                    <Network size={18} className="text-indigo-500" /> Case Topology
-                  </Link>
-                  <Link href="/community" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
-                    <Users size={18} className="text-indigo-500" /> Community Blog
-                  </Link>
-                  <Link href="/toolkit" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
-                    <Boxes size={18} className="text-indigo-500" /> Student Toolkit
-                  </Link>
-                  <Link href="/dashboard" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
-                    <LayoutDashboard size={18} className="text-indigo-500" /> Dashboard
-                  </Link>
-                  <Link href="/bookmarks" onClick={() => setMenuOpen(false)} className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2">
-                    <BookmarkIcon size={18} className="text-indigo-500" /> Saved Cases
-                  </Link>
+                  <NavMenuLink href="/profile" label="My Profile" icon={<User size={18} className="text-indigo-500" />} onClick={() => setMenuOpen(false)} />
+                  <NavMenuLink href="/graph" label="Case Topology" icon={<Network size={18} className="text-indigo-500" />} onClick={() => setMenuOpen(false)} />
+                  <NavMenuLink href="/community" label="Community Blog" icon={<Users size={18} className="text-indigo-500" />} onClick={() => setMenuOpen(false)} />
+                  <NavMenuLink href="/toolkit" label="Student Toolkit" icon={<Boxes size={18} className="text-indigo-500" />} onClick={() => setMenuOpen(false)} />
+                  <NavMenuLink href="/dashboard" label="Dashboard" icon={<LayoutDashboard size={18} className="text-indigo-500" />} onClick={() => setMenuOpen(false)} />
+                  <NavMenuLink href="/bookmarks" label="Saved Cases" icon={<BookmarkIcon size={18} className="text-indigo-500" />} onClick={() => setMenuOpen(false)} />
                 </>
               )}
               {!user && (
-                <button 
-                  onClick={() => { setAuthOpen(true); setMenuOpen(false); }}
-                  className="flex items-center gap-3 text-gray-700 hover:text-indigo-600 transition w-full py-2"
-                >
+                <button onClick={() => { setAuthOpen(true); setMenuOpen(false); }} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-slate-800 transition hover:bg-slate-50">
                   <User size={18} className="text-indigo-500" /> Researcher Login
                 </button>
               )}
-              <button onClick={toggleNotifications} className="flex items-center gap-3 text-gray-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition w-full py-2">
+
+              <button onClick={toggleNotifications} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-slate-800 transition hover:bg-slate-50">
                 <Bell size={18} className="text-indigo-500" />
                 <span className="flex-1 text-left">Push Notifications</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${notificationsEnabled ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
-                  {notificationsEnabled ? 'ON' : 'OFF'}
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${notificationsEnabled ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"}`}>
+                  {notificationsEnabled ? "ON" : "OFF"}
                 </span>
-                {unreadCount > 0 && <span className="w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full font-bold ml-2">{unreadCount}</span>}
+                {unreadCount > 0 && <span className="ml-2 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">{unreadCount}</span>}
               </button>
-              <button onClick={toggleTheme} className="flex items-center gap-3 text-gray-700 dark:text-slate-200 hover:text-indigo-600 dark:hover:text-indigo-400 transition w-full py-2 cursor-pointer">
-                {theme === "dark" ? (
-                  <Sun size={18} className="text-amber-400" />
-                ) : (
-                  <Moon size={18} className="text-indigo-500" />
-                )}
-                <span className="flex-1 text-left">Dark Mode</span>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${theme === 'dark' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-600'}`}>
-                  {theme === 'dark' ? 'ON' : 'OFF'}
+
+              <button onClick={toggleTheme} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-slate-800 transition hover:bg-slate-50">
+                {theme === "dark" ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-indigo-500" />}
+                <span className="flex-1 text-left">Theme</span>
+                <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${theme === "dark" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"}`}>
+                  {theme === "dark" ? "Dark" : "Light"}
                 </span>
               </button>
             </div>
 
-            {/* Auth Section - Only show logout when logged in */}
-            <div className="mt-4 mb-4 px-4 flex justify-center">
+            <div className="mb-4 mt-4 flex justify-center px-4">
               {user && (
-                <button
-                  onClick={handleLogout}
-                  className="w-full px-8 py-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition font-medium flex justify-center items-center gap-2"
-                >
+                <button onClick={handleLogout} className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-50 px-8 py-3 font-medium text-red-600 transition hover:bg-red-100">
                   <LogOut size={18} /> Logout
                 </button>
               )}
@@ -510,5 +438,38 @@ export default function Navbar() {
 
       <AuthModal isOpen={authOpen} onClose={() => setAuthOpen(false)} />
     </>
+  );
+}
+
+function NavLink({ href, active, icon, label }: { href: string; active: boolean; icon: ReactNode; label: string }) {
+  return (
+    <Link
+      href={href}
+      className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${
+        active ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+      }`}
+    >
+      <span className={active ? "text-indigo-600" : "text-slate-400"}>{icon}</span>
+      {label}
+    </Link>
+  );
+}
+
+function NavMenuLink({
+  href,
+  label,
+  icon,
+  onClick,
+}: {
+  href: string;
+  label: string;
+  icon: ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <Link href={href} onClick={onClick} className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-slate-800 transition hover:bg-slate-50">
+      {icon}
+      <span>{label}</span>
+    </Link>
   );
 }
