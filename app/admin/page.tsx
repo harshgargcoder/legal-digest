@@ -90,11 +90,14 @@ export default function AdminPage() {
     return () => unsub();
   }, []);
 
-  const fetchUsers = useCallback(async (tokenValue?: string) => {
-    setLoading(true);
-    setMessage(null);
+  const fetchUsers = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setLoading(true);
+      setMessage(null);
+    }
+
     try {
-      const actualToken = tokenValue || localToken || (await auth.currentUser?.getIdToken());
+      const actualToken = localToken || (await auth.currentUser?.getIdToken());
       const res = await apiFetch("/api/admin/users", {}, actualToken || undefined);
 
       if (res.status === 403) {
@@ -121,23 +124,28 @@ export default function AdminPage() {
       sessionStorage.setItem("admin_metrics_cache", JSON.stringify(data.cardMetrics));
 
     } catch (err) {
-      const text = err instanceof Error ? err.message : "Unknown error";
-      setMessage({ type: "error", text });
+      // Only show error message if it's not a background fetch or if it's a critical error
+      if (!options.silent) {
+        const text = err instanceof Error ? err.message : "Unknown error";
+        setMessage({ type: "error", text });
+      }
     } finally {
-      setLoading(false);
+      if (!options.silent) {
+        setLoading(false);
+      }
     }
   }, [apiFetch, localToken]);
 
   useEffect(() => {
     if (!localToken || !isAuthorized) return;
-    void fetchUsers(localToken);
+    void fetchUsers();
   }, [localToken, fetchUsers, isAuthorized]);
 
   useEffect(() => {
     if (!localToken || !isAuthorized) return;
     const timer = setInterval(() => {
-      void fetchUsers();
-    }, 3000);
+      void fetchUsers({ silent: true });
+    }, 10000); // Background refresh every 10 seconds
     return () => clearInterval(timer);
   }, [fetchUsers, localToken, isAuthorized]);
 
