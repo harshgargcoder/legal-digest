@@ -218,7 +218,7 @@ export async function GET(req: Request) {
 
     await requireAdmin(req);
 
-    const [firebaseUsers, prefsResult, usageResult] = await Promise.all([
+    const [firebaseUsers, prefsResult, usageResult, activityLogsResult] = await Promise.all([
       listAllFirebaseUsers(),
       supabase
         .from("user_preferences")
@@ -234,10 +234,17 @@ export async function GET(req: Request) {
             .split("T")[0],
         )
         .order("activity_date", { ascending: false }),
+      supabase
+        .from("user_activity_logs")
+        .select("user_id, action, details, created_at")
+        .order("created_at", { ascending: false })
+        .limit(2000),
     ]);
 
     if (prefsResult.error) throw prefsResult.error;
     if (usageResult.error) throw usageResult.error;
+    // Don't throw if activityLogsResult fails, as the table might not exist yet
+    const activityLogs = activityLogsResult.data || [];
 
     const prefMap = new Map(
       (prefsResult.data ?? []).map((p) => [
@@ -341,6 +348,28 @@ export async function GET(req: Request) {
           });
         }
       }
+
+      // Merge new activity logs
+      for (const log of activityLogs) {
+        if (!activityHistoryByUser.has(log.user_id)) {
+          activityHistoryByUser.set(log.user_id, []);
+        }
+        const history = activityHistoryByUser.get(log.user_id)!;
+        if (history.length < 50) {
+          history.push({
+            title: log.action === "VIEW_PAGE" ? "Page View" : log.action,
+            description: log.details || "User interacted with the system.",
+            timestamp: log.created_at,
+            status: "Trusted",
+          });
+        }
+      }
+
+      // Sort merged activity by timestamp
+      for (const [uid, history] of activityHistoryByUser.entries()) {
+        history.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      }
+
       ipTracking = true;
       ipNote = ipData.length > 0
         ? "IP addresses shown are tracked from real user sessions."
@@ -385,6 +414,23 @@ export async function GET(req: Request) {
           ipRiskReason: ipRiskReasonByUser.get(fUser.uid) ?? null,
           ipHistory: ipHistoryByUser.get(fUser.uid) ?? [],
           activityHistory: activityHistoryByUser.get(fUser.uid) ?? [],
+          presenceStatus: (() => {
+            const ipLogs = ipHistoryByUser.get(fUser.uid) ?? [];
+            const actLogs = activityHistoryByUser.get(fUser.uid) ?? [];
+            const lastIpTime = ipLogs.length ? new Date(ipLogs[0].seenAt).getTime() : 0;
+            const lastActTime = actLogs.length ? new Date(actLogs[0].timestamp).getTime() : 0;
+            const lastSignTime = fUser.metadata.lastSignInTime ? new Date(fUser.metadata.lastSignInTime).getTime() : 0;
+            
+            const lastInteraction = Math.max(lastIpTime, lastActTime, lastSignTime);
+            const now = Date.now();
+            const diffMins = (now - lastInteraction) / (1000 * 60);
+            const diffHours = diffMins / 60;
+
+            if (lastInteraction === 0) return "Inactive";
+            if (diffMins < 5) return "Online";
+            if (diffHours < 24) return "Offline";
+            return "Inactive";
+          })(),
         };
       })
       .sort((a, b) => {
