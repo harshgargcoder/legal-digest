@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Quote, Search, Sparkles, BookCheck, Clipboard, ChevronLeft, Loader2, AlertCircle, FilePlus, X, FileText, Image as ImageIcon, Scale } from "lucide-react";
+import { Quote, Search, Sparkles, BookCheck, Clipboard, ChevronLeft, Loader2, AlertCircle, FilePlus, X, FileText, Image as ImageIcon, Scale, Download, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import Link from "next/link";
+import { jsPDF } from "jspdf";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 
 export default function CitationDetectivePage() {
   const [content, setContent] = useState("");
-  const [result, setResult] = useState<string | null>(null);
+  const [result, setResult] = useState<{ analysis: string, correctedText: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [file, setFile] = useState<{ data: string, mimeType: string } | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,7 +83,16 @@ export default function CitationDetectivePage() {
 
       const data = (await res.json()) as { result?: string; error?: string };
       if (data.result) {
-        setResult(data.result);
+        try {
+          // AI often wraps JSON in code blocks
+          const jsonStr = data.result.replace(/```json\n?|```/g, "").trim();
+          const parsed = JSON.parse(jsonStr) as { analysis: string, correctedText: string };
+          setResult(parsed);
+        } catch (err) {
+          console.error("Failed to parse AI response:", err);
+          // Fallback if AI doesn't return JSON
+          setResult({ analysis: data.result, correctedText: content });
+        }
       } else {
         throw new Error(data.error || "Failed to audit research");
       }
@@ -95,7 +107,51 @@ export default function CitationDetectivePage() {
 
   const copyToClipboard = () => {
     if (result) {
-      navigator.clipboard.writeText(result);
+      navigator.clipboard.writeText(result.analysis + "\n\n" + result.correctedText);
+    }
+  };
+
+  const downloadCorrected = async (format: 'txt' | 'docx' | 'pdf') => {
+    if (!result) return;
+    setDownloadMenuOpen(false);
+
+    const fileName = `Corrected_Legal_Draft_${new Date().getTime()}`;
+
+    if (format === 'txt') {
+      const element = document.createElement("a");
+      const file = new Blob([result.correctedText], { type: 'text/plain' });
+      element.href = URL.createObjectURL(file);
+      element.download = `${fileName}.txt`;
+      document.body.appendChild(element);
+      element.click();
+      document.body.removeChild(element);
+    } else if (format === 'pdf') {
+      const doc = new jsPDF();
+      const splitText = doc.splitTextToSize(result.correctedText, 180);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.text(splitText, 15, 20);
+      doc.save(`${fileName}.pdf`);
+    } else if (format === 'docx') {
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: result.correctedText.split('\n').map(line => 
+            new Paragraph({
+              children: [new TextRun({ text: line, size: 24 })],
+            })
+          ),
+        }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${fileName}.docx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -204,12 +260,46 @@ export default function CitationDetectivePage() {
                   <Sparkles size={20} className="text-purple-400" /> AI Findings
                 </h3>
                 {result && (
-                  <button 
-                    onClick={copyToClipboard}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition border border-white/5"
-                  >
-                    <Clipboard size={14} /> Copy
-                  </button>
+                  <div className="flex items-center gap-2 relative">
+                    <button 
+                      onClick={copyToClipboard}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition border border-white/5"
+                    >
+                      <Clipboard size={14} /> Copy
+                    </button>
+                    
+                    <div className="relative">
+                      <button 
+                        onClick={() => setDownloadMenuOpen(!downloadMenuOpen)}
+                        className="flex items-center gap-2 px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition shadow-lg shadow-purple-600/20"
+                      >
+                        <Download size={14} /> Download <ChevronDown size={12} className={`transition-transform ${downloadMenuOpen ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      {downloadMenuOpen && (
+                        <div className="absolute right-0 mt-2 w-40 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                          <button 
+                            onClick={() => downloadCorrected('docx')}
+                            className="w-full px-4 py-3 text-left text-[10px] font-bold text-white/70 hover:text-white hover:bg-white/5 flex items-center gap-3 transition-colors border-b border-slate-700"
+                          >
+                            <FileText size={14} className="text-blue-400" /> MS Word (.docx)
+                          </button>
+                          <button 
+                            onClick={() => downloadCorrected('pdf')}
+                            className="w-full px-4 py-3 text-left text-[10px] font-bold text-white/70 hover:text-white hover:bg-white/5 flex items-center gap-3 transition-colors border-b border-slate-700"
+                          >
+                            <FilePlus size={14} className="text-red-400" /> PDF Document (.pdf)
+                          </button>
+                          <button 
+                            onClick={() => downloadCorrected('txt')}
+                            className="w-full px-4 py-3 text-left text-[10px] font-bold text-white/70 hover:text-white hover:bg-white/5 flex items-center gap-3 transition-colors"
+                          >
+                            <Scale size={14} className="text-slate-400" /> Plain Text (.txt)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
 
@@ -249,7 +339,7 @@ export default function CitationDetectivePage() {
                         strong: ({node, ...props}) => <strong className="text-purple-300 font-bold" {...props} />,
                       }}
                     >
-                      {result}
+                      {result.analysis}
                     </ReactMarkdown>
                   </div>
                 ) : (

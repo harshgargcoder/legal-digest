@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/app/components/Navbar";
-import Footer from "@/app/components/Footer";
 import Script from "next/script";
-import { Search } from "lucide-react";
 import { SearchProvider } from "./context/SearchContext";
 import { NotificationProvider } from "./context/NotificationContext";
-import SupportBot from "@/app/components/SupportBot";
+import { ThemeProvider } from "./context/ThemeContext";
+import AppShell from "@/app/components/AppShell";
 
 const GA_ID = "G-Z6NGF984TS";
 
@@ -36,20 +34,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <ThemeProvider>
         <SearchProvider>
           <NotificationProvider>
-            <Navbar />
-
-            <main className="min-h-screen">
-              {children}
-            </main>
-
-            <Footer />
-            <SupportBot />
+            <AppShell>{children}</AppShell>
           </NotificationProvider>
 
           {/* Google Analytics */}
@@ -66,6 +58,7 @@ export default function RootLayout({
           `}
           </Script>
         </SearchProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

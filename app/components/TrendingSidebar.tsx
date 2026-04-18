@@ -14,7 +14,7 @@ export default function TrendingSidebar({ setSearch }: Props) {
 
   useEffect(() => {
     setNotificationsEnabled(localStorage.getItem("notifications") === "true");
-    
+
     const fetchTopics = async () => {
       try {
         const res = await fetch("/api/summarize");
@@ -72,7 +72,7 @@ export default function TrendingSidebar({ setSearch }: Props) {
 
   return (
     <div className="sticky top-32 flex flex-col gap-6">
-      
+
       {/* 1. Trending Topics Section */}
       <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm relative overflow-hidden group">
         <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/5 rounded-full blur-[80px] pointer-events-none group-hover:bg-purple-500/10 transition-colors duration-1000"></div>
@@ -152,13 +152,12 @@ export default function TrendingSidebar({ setSearch }: Props) {
         <p className="text-xs text-slate-600 leading-relaxed mb-4">
           Enable push notifications to receive real-time alerts for major Supreme Court rulings and precedent-setting judgments.
         </p>
-        <button 
+        <button
           onClick={toggleNotifications}
-          className={`w-full py-2.5 rounded-xl text-xs font-semibold border transition-colors shadow-lg active:scale-95 ${
-            notificationsEnabled 
-              ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100' 
+          className={`w-full py-2.5 rounded-xl text-xs font-semibold border transition-colors shadow-lg active:scale-95 ${notificationsEnabled
+              ? 'bg-red-50 text-red-600 border-red-100 hover:bg-red-100'
               : 'bg-indigo-600 text-white border-indigo-500 hover:bg-indigo-700 shadow-indigo-600/20'
-          }`}
+            }`}
         >
           {notificationsEnabled ? "Disable Alerts" : "Enable Alerts"}
         </button>
