@@ -11,6 +11,12 @@ import {
   PanelLeftClose,
   PanelLeft,
   ShieldCheck,
+  Moon,
+  Sun,
+  Search,
+  Shield,
+  CheckCircle2,
+  History,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut, signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
@@ -19,8 +25,9 @@ import { useAuth } from "../hooks/useAuth";
 import { AdminUser, CardMetrics, Summary } from "./types";
 import { AdminLoginGate } from "./auth/AdminLoginGate";
 import { DashboardSection } from "./dashboard/DashboardSection";
-import { UserLogsPanel } from "./userlogs/UserLogsPanel";
+import UserLogsPanel from "./userlogs/UserLogsPanel";
 import { AuditTrailPanel } from "./audit/AuditTrailPanel";
+import ConfirmModal from "./shared/ConfirmModal";
 
 type AdminSection = "dashboard" | "userLogs" | "permissions" | "security" | "auditTrail";
 
@@ -52,6 +59,7 @@ export default function AdminPage() {
   const [activeSection, setActiveSection] = useState<AdminSection>("dashboard");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isSidebarVisible, setIsSidebarVisible] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
   const [isMounted, setIsMounted] = useState(false);
   const [adminId, setAdminId] = useState("");
@@ -59,6 +67,22 @@ export default function AdminPage() {
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [busyUid, setBusyUid] = useState<string | null>(null);
+  
+  // Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDestructive?: boolean;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    isDestructive: false,
+  });
+
   const router = useRouter();
 
   useEffect(() => {
@@ -90,11 +114,14 @@ export default function AdminPage() {
     return () => unsub();
   }, []);
 
-  const fetchUsers = useCallback(async (tokenValue?: string) => {
-    setLoading(true);
-    setMessage(null);
+  const fetchUsers = useCallback(async (options: { silent?: boolean } = {}) => {
+    if (!options.silent) {
+      setLoading(true);
+      setMessage(null);
+    }
+
     try {
-      const actualToken = tokenValue || localToken || (await auth.currentUser?.getIdToken());
+      const actualToken = localToken || (await auth.currentUser?.getIdToken());
       const res = await apiFetch("/api/admin/users", {}, actualToken || undefined);
 
       if (res.status === 403) {
@@ -121,23 +148,27 @@ export default function AdminPage() {
       sessionStorage.setItem("admin_metrics_cache", JSON.stringify(data.cardMetrics));
 
     } catch (err) {
-      const text = err instanceof Error ? err.message : "Unknown error";
-      setMessage({ type: "error", text });
+      if (!options.silent) {
+        const text = err instanceof Error ? err.message : "Unknown error";
+        setMessage({ type: "error", text });
+      }
     } finally {
-      setLoading(false);
+      if (!options.silent) {
+        setLoading(false);
+      }
     }
   }, [apiFetch, localToken]);
 
   useEffect(() => {
     if (!localToken || !isAuthorized) return;
-    void fetchUsers(localToken);
+    void fetchUsers();
   }, [localToken, fetchUsers, isAuthorized]);
 
   useEffect(() => {
     if (!localToken || !isAuthorized) return;
     const timer = setInterval(() => {
-      void fetchUsers();
-    }, 3000);
+      void fetchUsers({ silent: true });
+    }, 10000); 
     return () => clearInterval(timer);
   }, [fetchUsers, localToken, isAuthorized]);
 
@@ -233,27 +264,32 @@ export default function AdminPage() {
   }
 
   async function handleDeleteUser(targetUserId: string) {
-    if (!window.confirm("CRITICAL ACTION: Are you sure you want to PERMANENTLY delete this user? This will erase all their data from Firebase and Database. This cannot be undone.")) return;
+    setConfirmModal({
+      isOpen: true,
+      title: "Delete User Permanently?",
+      message: "CRITICAL ACTION: This will erase all their data from Firebase and Database. This cannot be undone.",
+      isDestructive: true,
+      onConfirm: async () => {
+        setBusyUid(targetUserId);
+        try {
+          const res = await apiFetch("/api/admin/users", {
+            method: "DELETE",
+            body: JSON.stringify({ targetUserId }),
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Delete failed");
 
-    setBusyUid(targetUserId);
-    try {
-      const res = await apiFetch("/api/admin/users", {
-        method: "DELETE",
-        body: JSON.stringify({ targetUserId }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Delete failed");
-
-      setMessage({ type: "success", text: "User & Database records deleted." });
-      setSelectedUserId(null);
-      setActiveSection("dashboard");
-      await fetchUsers();
-    } catch (err) {
-      console.error("Delete Error:", err);
-      setMessage({ type: "error", text: "Failed to delete user records." });
-    } finally {
-      setBusyUid(null);
-    }
+          setMessage({ type: "success", text: "User & Database records deleted." });
+          setSelectedUserId(null);
+          setActiveSection("dashboard");
+          fetchUsers();
+        } catch (err: any) {
+          setMessage({ type: "error", text: err.message });
+        } finally {
+          setBusyUid(null);
+        }
+      }
+    });
   }
 
   if (!isMounted) {
@@ -281,76 +317,93 @@ export default function AdminPage() {
           <AlertCircle className="mx-auto text-rose-600 mb-4" size={36} />
           <h1 className="text-2xl font-black text-slate-900">Access Denied</h1>
           <p className="text-slate-600 mt-3">Your account is not marked as Admin.</p>
-          <Link href="/" className="mt-6 inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white font-semibold">
-            Go Home
-          </Link>
+          <div className="mt-6 flex flex-col gap-3">
+            <Link href="/" className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-slate-900 text-white font-semibold transition-all hover:bg-slate-800">
+              Go Home
+            </Link>
+            <button
+              onClick={async () => {
+                await signOut(auth);
+                sessionStorage.clear();
+                window.location.reload();
+              }}
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-slate-200 text-slate-600 font-semibold hover:bg-slate-50 transition-all shadow-sm"
+            >
+              Switch Account / Logout
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-[#f3f6fb] flex flex-col font-sans overflow-hidden">
-      <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-50">
-        <Link href="/" className="flex items-center gap-3">
-          <Image src="/new_logo.png" alt="Legal Digest" width={120} height={40} className="h-auto w-auto" priority />
-          <span className="h-6 w-[1px] bg-slate-200 mx-1" />
-          <span className="text-sm font-bold text-slate-400 uppercase tracking-widest">Admin</span>
-        </Link>
+    <div className={`h-screen flex flex-col font-sans overflow-hidden transition-colors duration-300 ${isDarkMode ? "dark bg-slate-950 text-slate-200" : "bg-[#f8fafc] text-slate-900"}`}>
+      <header className={`h-16 border-b flex items-center justify-between px-8 sticky top-0 z-50 transition-colors ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white/80 backdrop-blur-md border-slate-200"}`}>
         <div className="flex items-center gap-4">
-          <div className="px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-widest border border-indigo-100">
-            Secure Session
+          <Link href="/" className="flex items-center gap-3">
+            <Image src="/new_logo.png" alt="Legal Digest" width={110} height={35} className="h-auto w-auto" priority />
+            <span className={`h-5 w-[1px] mx-1 ${isDarkMode ? "bg-slate-700" : "bg-slate-200"}`} />
+            <span className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-400" : "text-slate-400"}`}>Management</span>
+          </Link>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className={`p-2 rounded-lg border transition-all cursor-pointer ${isDarkMode ? "bg-slate-800 border-slate-700 text-amber-400" : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"}`}
+          >
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <div className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${isDarkMode ? "bg-indigo-900/30 border-indigo-500/30 text-indigo-400" : "bg-indigo-50 border-indigo-100 text-indigo-700"}`}>
+            Secure Auth
           </div>
         </div>
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <aside className={`${isSidebarVisible ? "w-72 p-6" : "w-0 overflow-hidden p-0"} transition-all duration-300 bg-white border-r border-slate-200 flex flex-col relative`}>
-          <div className="pb-6 border-b border-slate-100">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">Admin Ledger</h2>
-              <button onClick={() => setIsSidebarVisible(false)} className="p-1.5 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition-all border border-transparent hover:border-slate-200">
-                <PanelLeftClose size={18} />
-              </button>
-            </div>
-            <p className="text-[10px] uppercase font-bold tracking-[0.2em] text-slate-400 mt-2">Institutional Dashboard</p>
+        <aside className={`${isSidebarVisible ? "w-64 p-5" : "w-0 overflow-hidden p-0"} transition-all duration-300 border-r flex flex-col relative ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
+          <div className={`pb-4 border-b ${isDarkMode ? "border-slate-800" : "border-slate-100"}`}>
+            <h2 className="text-sm font-black uppercase tracking-widest px-1">Dashboard</h2>
           </div>
-          <nav className="mt-5 space-y-1 text-sm flex-1 overflow-y-auto pr-1 custom-scrollbar">
-            <button onClick={() => setActiveSection("dashboard")} className={`w-full text-left px-3 py-2 rounded-lg font-semibold ${activeSection === "dashboard" ? "bg-indigo-600 text-white shadow-md shadow-indigo-100" : "text-slate-600 hover:bg-white"}`}>Dashboard</button>
-            <button onClick={() => setActiveSection("userLogs")} className={`w-full text-left px-3 py-2 rounded-lg font-semibold ${activeSection === "userLogs" ? "bg-indigo-600 text-white shadow-md shadow-indigo-100" : "text-slate-600 hover:bg-white"}`}>User Logs</button>
-            <button onClick={() => setActiveSection("auditTrail")} className={`w-full text-left px-3 py-2 rounded-lg font-semibold ${activeSection === "auditTrail" ? "bg-indigo-600 text-white shadow-md shadow-indigo-100" : "text-slate-600 hover:bg-white"}`}>Audit Trail</button>
+          <nav className="mt-6 space-y-2 text-[13px] flex-1 overflow-y-auto pr-1 custom-scrollbar">
+            <button onClick={() => setActiveSection("dashboard")} className={`w-full text-left px-4 py-2.5 rounded-lg font-black uppercase tracking-widest cursor-pointer ${activeSection === "dashboard" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : isDarkMode ? "text-slate-400 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-50"}`}>Overview</button>
+            <button onClick={() => setActiveSection("userLogs")} className={`w-full text-left px-4 py-2.5 rounded-lg font-black uppercase tracking-widest cursor-pointer ${activeSection === "userLogs" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : isDarkMode ? "text-slate-400 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-50"}`}>User Log</button>
+            <button onClick={() => setActiveSection("auditTrail")} className={`w-full text-left px-4 py-2.5 rounded-lg font-black uppercase tracking-widest cursor-pointer ${activeSection === "auditTrail" ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20" : isDarkMode ? "text-slate-400 hover:bg-slate-800" : "text-slate-600 hover:bg-slate-50"}`}>Audit Log</button>
           </nav>
 
-          <div className="mt-auto pt-6 border-t border-slate-100">
-            <div className="p-4 bg-slate-50 rounded-[2rem] border border-slate-100 mb-4 shadow-sm relative group overflow-hidden">
-              <div className="flex items-center gap-3 relative z-10">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-100">
+          <div className={`mt-auto pt-4 border-t ${isDarkMode ? "border-slate-800" : "border-slate-100"}`}>
+            <div className="px-2 py-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-black text-xs">
                   {(authUser?.displayName || "A").slice(0, 1).toUpperCase()}
                 </div>
                 <div className="overflow-hidden">
-                  <p className="text-sm font-black text-slate-900 truncate">{authUser?.displayName || "Admin"}</p>
-                  <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">System Admin</p>
+                  <p className="text-xs font-bold truncate">{authUser?.displayName || "Admin"}</p>
+                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Master</p>
                 </div>
               </div>
-              <button onClick={handleLogout} className="w-full mt-4 py-2.5 rounded-xl bg-white border border-slate-200 text-rose-600 text-xs font-bold flex items-center justify-center gap-2 hover:bg-rose-50 transition-all shadow-sm">
-                <LogOut size={14} /> Sign Out
+              <button 
+                onClick={handleLogout} 
+                className={`w-full mt-4 flex items-center gap-2 text-xs font-black transition-all cursor-pointer ${isDarkMode ? "text-rose-400 hover:text-rose-300" : "text-rose-600 hover:text-rose-700"}`}
+              >
+                <LogOut size={16} /> LOG OUT ACCOUNT
               </button>
-            </div>
-            <div className="flex items-center justify-center gap-2 py-1">
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Live System V1.2</span>
             </div>
           </div>
         </aside>
 
-        {!isSidebarVisible && (
-          <button onClick={() => setIsSidebarVisible(true)} className="fixed bottom-8 left-8 p-3 bg-slate-900 text-white rounded-2xl shadow-2xl z-50 hover:scale-110 transition-all border border-white/20">
-            <PanelLeft size={20} />
-          </button>
-        )}
+        <button 
+          onClick={() => setIsSidebarVisible(!isSidebarVisible)} 
+          className={`fixed top-32 p-2.5 rounded-r-xl shadow-2xl z-50 border-y border-r transition-all duration-300 cursor-pointer hover:pr-4 active:scale-95 ${
+            isSidebarVisible ? "left-64" : "left-0"
+          } ${isDarkMode ? "bg-slate-800 border-slate-700 text-white" : "bg-slate-900 border-white/20 text-white"}`}
+          title={isSidebarVisible ? "Collapse Sidebar" : "Expand Sidebar"}
+        >
+          {isSidebarVisible ? <PanelLeftClose size={20} /> : <PanelLeft size={20} />}
+        </button>
 
-        <main className="flex-1 overflow-y-auto custom-scrollbar bg-[#f3f6fb] relative">
-          <div className="p-8 max-w-[1400px] mx-auto min-h-full flex flex-col">
+        <main className={`flex-1 overflow-y-auto custom-scrollbar relative transition-colors ${isDarkMode ? "bg-slate-950" : "bg-[#f8fafc]"}`}>
+          <div className="p-6 lg:p-10 max-w-[1440px] mx-auto min-h-full flex flex-col gap-8">
             {activeSection === "dashboard" && (
               <DashboardSection
                 summary={summary}
@@ -366,6 +419,8 @@ export default function AdminPage() {
                 busyUid={busyUid}
                 handleResetPassword={handleResetPassword}
                 handleBanToggle={handleBanToggle}
+                isDarkMode={isDarkMode}
+                recentActivityLimit={5}
               />
             )}
 
@@ -376,19 +431,26 @@ export default function AdminPage() {
             {activeSection === "userLogs" && (
               users.length > 0 ? (
                 <UserLogsPanel
-                  key={selectedUserId || users[0].uid}
                   user={users.find(u => u.uid === selectedUserId) || users[0]}
                   allUsers={users}
-                  onSelectUser={(uid) => setSelectedUserId(uid)}
-                  onBackToList={() => setActiveSection("dashboard")}
+                  onSelectUser={(uid: string) => setSelectedUserId(uid)}
+                  onBackToList={() => {
+                    setSelectedUserId(null);
+                    setActiveSection("dashboard");
+                  }}
                   busyUid={busyUid}
                   handleResetPassword={handleResetPassword}
                   handleBanToggle={handleBanToggle}
                   handleDeleteUser={handleDeleteUser}
+                  isDarkMode={isDarkMode}
                 />
               ) : (
-                <div className="flex-1 flex items-center justify-center p-20 text-center text-slate-400">
-                  <p className="font-bold">No Users Detected</p>
+                <div className={`flex-1 flex flex-col items-center justify-center p-20 text-center ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                  <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 ${isDarkMode ? "bg-slate-900" : "bg-slate-100"}`}>
+                    <Search size={32} />
+                  </div>
+                  <p className="font-black uppercase tracking-widest text-sm">No Users Detected</p>
+                  <p className="text-xs mt-2 font-medium opacity-60 text-slate-500">Wait for user data to sync or check database connection.</p>
                 </div>
               )
             )}
@@ -400,6 +462,17 @@ export default function AdminPage() {
             </footer>
           </div>
         </main>
+
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          onClose={() => setConfirmModal({ ...confirmModal, isOpen: false })}
+          onConfirm={confirmModal.onConfirm}
+          title={confirmModal.title}
+          message={confirmModal.message}
+          isDarkMode={isDarkMode}
+          isDestructive={confirmModal.isDestructive}
+          confirmText="Yes, Delete User"
+        />
       </div>
     </div>
   );
