@@ -139,8 +139,11 @@ function LoginRequiredModal({ onClose }: { onClose: () => void }) {
           >
             Cancel
           </button>
-          <a
-            href="/login"
+          <button
+            onClick={() => {
+              window.location.hash = "login";
+              onClose();
+            }}
             style={{
               flex: 1,
               borderRadius: 12,
@@ -150,7 +153,8 @@ function LoginRequiredModal({ onClose }: { onClose: () => void }) {
               background: "linear-gradient(135deg, #7c3aed, #a855f7)",
               color: "#fff",
               boxShadow: "0 2px 12px 0 rgba(139,92,246,0.4)",
-              textDecoration: "none",
+              border: "none",
+              cursor: "pointer",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -166,7 +170,7 @@ function LoginRequiredModal({ onClose }: { onClose: () => void }) {
             }
           >
             Sign In
-          </a>
+          </button>
         </div>
       </div>
     </div>,

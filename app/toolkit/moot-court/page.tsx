@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { ChangeEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Gavel } from "lucide-react";
@@ -28,8 +29,13 @@ import type {
   TrialPhase,
   ViewMode,
 } from "./types";
+import { QuickMootModal } from "./components/quick-moot-modal";
+import { TokenMeter } from "./components/token-meter";
+import { approximateTokenCount } from "@/lib/moot-court-utils";
+
 
 export default function MootCourtPage() {
+  const router = useRouter();
   const [view, setView] = useState<ViewMode>("setup");
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [caseType, setCaseType] = useState<CaseType>("Civil");
@@ -74,6 +80,12 @@ export default function MootCourtPage() {
   const [plaintiffScrollEl, setPlaintiffScrollEl] = useState<HTMLDivElement | null>(null);
   const [defendantScrollEl, setDefendantScrollEl] = useState<HTMLDivElement | null>(null);
   const [centerScrollEl, setCenterScrollEl] = useState<HTMLDivElement | null>(null);
+
+  const [showChoiceModal, setShowChoiceModal] = useState(true);
+  const [totalTokens, setTotalTokens] = useState(0);
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [primaryModel, setPrimaryModel] = useState("");
+
 
   const briefSourceLabel = briefText.trim() || (briefFile ? `Uploaded brief file: ${briefFile.name}` : "No brief selected yet.");
 
@@ -172,6 +184,30 @@ export default function MootCourtPage() {
     }
   };
 
+  const logSessionActivity = async (status: 'active' | 'completed' | 'failed' = 'active') => {
+    if (!sessionId || !user) return;
+
+    try {
+      await supabase.from("session_logs").upsert({
+        session_id: sessionId,
+        user_id: user.uid,
+        turn_count: messages.length,
+        total_tokens: totalTokens,
+        primary_model: primaryModel,
+        status,
+        metadata: {
+          caseType,
+          jurisdiction,
+          difficulty,
+          trialPhase
+        }
+      }, { onConflict: 'session_id' });
+    } catch (err) {
+      console.error("Logging failed:", err);
+    }
+  };
+
+
   const speak = (text: string, role?: string) => {
     if (!isAudioMode || isPaused) {
       window.speechSynthesis.cancel();
@@ -214,7 +250,10 @@ export default function MootCourtPage() {
   };
 
   const getEvaluation = async () => {
-    if (messages.length < 3) return;
+    if (messages.length < 3) {
+      setView("setup");
+      return;
+    }
 
     setIsEvaluating(true);
     try {
@@ -249,8 +288,10 @@ export default function MootCourtPage() {
       console.error("Evaluation failed:", err);
     } finally {
       setIsEvaluating(false);
+      logSessionActivity('completed');
     }
   };
+
 
   const startTrial = async () => {
     setView("loading");
@@ -288,7 +329,24 @@ export default function MootCourtPage() {
     }
 
     setIsSaving(false);
+    setSessionStartTime(new Date());
+    logSessionActivity('active');
   };
+
+  const handleQuickMoot = (role: "Plaintiff" | "Defendant") => {
+    setCaseType("Contract Dispute");
+    setJurisdiction("Indian Civil Courts (CPC/IEA)");
+    setBriefText("A software development company (Petitioner) sues a retail client (Respondent) for ₹50 Lakhs in unpaid invoices. The Respondent alleges that the software was delivered 6 months late and contained critical bugs that caused business loss. The Petitioner argues that the delays were caused by the Respondent changing requirements 15 times mid-project.");
+    setRoles({
+      plaintiff: role === "Plaintiff" ? "Human" : "AI",
+      defendant: role === "Defendant" ? "Human" : "AI",
+      witness: "AI"
+    });
+    setShowChoiceModal(false);
+    // Use a slight delay to ensure states are updated if needed, though setState is async
+    setTimeout(() => startTrial(), 100);
+  };
+
 
   const handleObjection = async (aiObjectionContent?: string) => {
     setIsJudgeThinking(true);
@@ -393,11 +451,23 @@ export default function MootCourtPage() {
           brief: truncatedBrief,
           file: attachedFile,
           messageCount: messages.length,
+          preferredModel: primaryModel,
         }),
       });
 
       setAttachedFile(null);
       const data = await res.json();
+      
+      if (data.usedModel && data.usedModel !== primaryModel) {
+        setPrimaryModel(data.usedModel);
+      }
+
+      
+      // Update tokens
+      const sentTokens = approximateTokenCount(content + context);
+      const receivedTokens = data.result ? approximateTokenCount(data.result) : 0;
+      setTotalTokens(prev => prev + sentTokens + receivedTokens);
+
       if (data.result) {
         let judgeResponse = data.result;
         
@@ -433,13 +503,17 @@ export default function MootCourtPage() {
         if (shouldAdvance) {
           setTimeout(() => advanceToNextPhase(trialPhase), 2000);
         }
+        
+        logSessionActivity();
       }
     } catch (err) {
       console.error("AI failed:", err);
+      logSessionActivity('failed');
     } finally {
       setIsJudgeThinking(false);
     }
   };
+
 
   const generateAIArgument = async (aiRole: "plaintiff" | "defendant" | "witness", lastJudgeResponse: string) => {
     await new Promise((resolve) => setTimeout(resolve, 1200));
@@ -463,10 +537,22 @@ export default function MootCourtPage() {
           caseType,
           counselStrategy,
           brief: truncatedBrief,
+          preferredModel: primaryModel,
         }),
       });
 
       const data = await res.json();
+      
+      if (data.usedModel && data.usedModel !== primaryModel) {
+        setPrimaryModel(data.usedModel);
+      }
+
+      
+      // Update tokens
+      const sentTokens = approximateTokenCount(lastJudgeResponse + context);
+      const receivedTokens = data.result ? approximateTokenCount(data.result) : 0;
+      setTotalTokens(prev => prev + sentTokens + receivedTokens);
+
       if (data.result) {
         const aiMsg: Message = { role: aiRole, content: data.result, timestamp: new Date() };
         setMessages((prev) => [...prev, aiMsg]);
@@ -479,11 +565,14 @@ export default function MootCourtPage() {
         } else if (aiRole !== "witness") {
           setActiveTurn(aiRole === "plaintiff" ? "defendant" : "plaintiff");
         }
+        
+        logSessionActivity();
       }
     } catch (err) {
       console.error("AI argument generation failed:", err);
     }
   };
+
 
   const advanceToNextPhase = (fromPhase: TrialPhase) => {
     const phases: TrialPhase[] = ["Opening Statements", "Witness Examination", "Closing Arguments", "Verdict Deliberation"];
@@ -536,9 +625,30 @@ export default function MootCourtPage() {
         data: base64Data,
         mimeType: file.type,
       });
+
+      // Task 4: Summarize brief on upload
+      try {
+        // Here we'd ideally extract text from PDF first, but for now assuming we use briefText
+        // or just the briefText area for demonstration.
+        // Let's call the summarizer if briefText is populated.
+        if (briefText.length > 500) {
+          const res = await fetch("/api/moot-court/summarize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: briefText }),
+          });
+          const data = await res.json();
+          if (data.summary) {
+            setBriefText(data.summary + "\n\n(Summarized for efficiency)");
+          }
+        }
+      } catch (err) {
+        console.error("Summarization failed:", err);
+      }
     };
     reader.readAsDataURL(file);
   };
+
 
   const startListening = (role: "plaintiff" | "defendant" | "witness") => {
     if (isListening) {
@@ -587,7 +697,15 @@ export default function MootCourtPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-slate-900 selection:bg-indigo-100 font-sans">
+      <QuickMootModal 
+        isOpen={showChoiceModal} 
+        onClose={() => router.push("/toolkit")}
+        onQuickMoot={handleQuickMoot}
+        onCustomTrial={() => setShowChoiceModal(false)}
+      />
+
       <AnimatePresence mode="wait">
+
         {view === "setup" ? (
           <SetupScreen
             key="setup"
@@ -624,8 +742,14 @@ export default function MootCourtPage() {
         ) : (
         <div key="courtroom" className="relative flex min-h-screen flex-col">
           <PhaseNavigator currentPhase={trialPhase} progress={phaseProgress} />
+          
+          {/* Token Meter Overlay */}
+          <div className="fixed bottom-6 right-6 z-[100] w-64">
+            <TokenMeter usedTokens={totalTokens} />
+          </div>
 
           <div className="relative flex-1 overflow-hidden">
+
             <CourtroomView
               trialPhase={trialPhase}
               activeTurn={activeTurn}
