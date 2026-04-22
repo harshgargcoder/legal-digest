@@ -2,13 +2,13 @@ import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 const mockData = [
-  { name: 'Mon', groq: 4000, deepseek: 2400, gemini: 2400 },
-  { name: 'Tue', groq: 3000, deepseek: 1398, gemini: 2210 },
-  { name: 'Wed', groq: 2000, deepseek: 9800, gemini: 2290 },
-  { name: 'Thu', groq: 2780, deepseek: 3908, gemini: 2000 },
-  { name: 'Fri', groq: 1890, deepseek: 4800, gemini: 2181 },
-  { name: 'Sat', groq: 2390, deepseek: 3800, gemini: 2500 },
-  { name: 'Sun', groq: 3490, deepseek: 4300, gemini: 2100 },
+  { name: 'Mon', groq: 4000, gemini: 2400 },
+  { name: 'Tue', groq: 3000, gemini: 2210 },
+  { name: 'Wed', groq: 2000, gemini: 2290 },
+  { name: 'Thu', groq: 2780, gemini: 2000 },
+  { name: 'Fri', groq: 1890, gemini: 2181 },
+  { name: 'Sat', groq: 2390, gemini: 2500 },
+  { name: 'Sun', groq: 3490, gemini: 2100 },
 ];
 
 export default function TokenUsageChart() {
@@ -38,7 +38,6 @@ export default function TokenUsageChart() {
               wrapperStyle={{ fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase', paddingTop: '20px' }}
             />
             <Bar dataKey="groq" stackId="a" fill="#6366f1" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="deepseek" stackId="a" fill="#3b82f6" />
             <Bar dataKey="gemini" stackId="a" fill="#10b981" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>

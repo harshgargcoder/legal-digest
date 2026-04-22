@@ -89,7 +89,6 @@ export default function AdminDashboard() {
       const cost = apiCalls?.reduce((acc, curr) => {
         const t = (curr.input_tokens || 0) + (curr.output_tokens || 0);
         if (curr.model === 'groq') return acc + t * 0.00000027;
-        if (curr.model === 'deepseek') return acc + t * 0.00000014;
         if (curr.model === 'gemini') return acc + t * 0.000000075;
         return acc;
       }, 0) || 0;

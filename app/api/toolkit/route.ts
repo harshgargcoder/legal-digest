@@ -78,9 +78,8 @@ export async function POST(req: Request) {
           } else if (mcRole === "witness") {
             prompt = `
               SYSTEM PROMPT LAYERS (WITNESS):
-              1. CHARACTER BRIEF: You are a witness in this ${caseType} case. Persona: ${
-              witnessPersona || "Cooperative"
-            }. If your name isn't mentioned in the facts, invent a realistic name for yourself.
+              1. CHARACTER BRIEF: You are a witness in this ${caseType} case. Persona: ${witnessPersona || "Cooperative"
+              }. If your name isn't mentioned in the facts, invent a realistic name for yourself.
               2. CHARACTER KNOWLEDGE: Answer only what your character would logically know based on: "${mcBrief}".
               3. ROLEPLAY MODE: Answer in the first person. Stay consistent in tone (emotion: ${witnessPersona}).
               4. CONSISTENCY TRACKER: Do not contradict your prior statements in the record: "${context}".
@@ -92,18 +91,15 @@ export async function POST(req: Request) {
           } else if (mcRole === "counsel") {
             prompt = `
               SYSTEM PROMPT LAYERS (COUNSEL):
-              1. CONTEXT: You are an advocate for the ${
-              activeTurn === "plaintiff" ? "Plaintiff" : "Defendant"
-            }.
-              2. STRATEGY: ${
-              counselStrategy || "Aggressive case building"
-            }. Focus on precedents and burden of proof.
+              1. CONTEXT: You are an advocate for the ${activeTurn === "plaintiff" ? "Plaintiff" : "Defendant"
+              }.
+              2. STRATEGY: ${counselStrategy || "Aggressive case building"
+              }. Focus on precedents and burden of proof.
               3. RECORD: Use prior statements in this session: "${context}".
               4. ROLE: Experienced advocate. Never fabricate facts outside the case brief: "${mcBrief}".
               
-              CURRENT SITUATION: The ${
-              activeTurn === "plaintiff" ? "Respondent" : "Petitioner"
-            } just said/did: "${content}".
+              CURRENT SITUATION: The ${activeTurn === "plaintiff" ? "Respondent" : "Petitioner"
+              } just said/did: "${content}".
               
               CAPABILITIES:
               - If it's your turn: Make a strategic argument or cross-examine.
@@ -159,9 +155,8 @@ export async function POST(req: Request) {
       case "citation-detective":
         prompt = `
           You are an expert legal researcher and editor. 
-          Analyze the following legal research draft for citations: "${
-          content || "See attached file"
-        }".
+          Analyze the following legal research draft for citations: "${content || "See attached file"
+          }".
 
           TASK:
           1. Scan the text/image/PDF for any case laws or statutes mentioned.
@@ -187,6 +182,33 @@ export async function POST(req: Request) {
           2. Explain the "Legal Takeaway" of the story at the end.
           3. Use simple language but maintain legal accuracy.
           4. Keep the story engaging and under 250 words.
+        `;
+        break;
+
+      case "briefing-pro":
+        prompt = `
+          You are an elite legal analyst and senior advocate.
+          Your task is to provide a comprehensive yet concise "Case Brief" for the provided legal document or case data.
+          
+          DOCUMENT/DATA: "${content || "See attached file"}"
+          
+          STRUCTURE YOUR BRIEF AS FOLLOWS:
+          1. **Case Title & Citation** (If available, else identify the parties/subject).
+          2. **Nature of the Case** (Short description of the legal dispute).
+          3. **Core Facts** (Bullet points of critical events).
+          4. **Primary Issues** (The main legal questions the court must decide).
+          5. **Key Statutes/Precedents Involved** (Relevant laws or prior judgments).
+          6. **Summary of Arguments** (Brief overview of Petitioner vs Respondent).
+          7. **Conclusion/Status** (Current standing or final verdict).
+
+          TONE: Professional, analytical, and objective.
+          LANGUAGE: Use clear legal terminology.
+          
+          RETURN A STRICT JSON RESPONSE (no other text):
+          {
+            "brief": "Markdown formatted summary with the structure above",
+            "takeaway": "A 2-sentence 'pro-tip' for a lawyer handling such a case."
+          }
         `;
         break;
 
@@ -232,52 +254,21 @@ export async function POST(req: Request) {
     const MAX_INPUT_CHARS = 8000;
     const optimizedPrompt = prompt.length > MAX_INPUT_CHARS
       ? prompt.substring(0, 1500) + "\n... [TRUNCATED] ...\n" +
-        prompt.substring(prompt.length - 6000)
+      prompt.substring(prompt.length - 6000)
       : prompt;
 
     let text = "";
     let lastError = "";
-    const preferredModel = body.preferredModel; // 'DeepSeek', 'Gemini', or 'OpenAI'
+    let preferredModel = body.preferredModel; // 'Gemini' or 'OpenAI'
 
-    // --- LLM PRIORITY: DEEPSEEK -> GEMINI -> OPENAI ---
-
-    // 1. Try DeepSeek (Primary)
-    if (
-      (!preferredModel || preferredModel === "DeepSeek") &&
-      process.env.DEEPSEEK_API_KEY
-    ) {
-      const deepseek = new OpenAI({
-        apiKey: process.env.DEEPSEEK_API_KEY,
-        baseURL: "https://api.deepseek.com",
-      });
-      const deepseekModels = ["deepseek-chat", "deepseek-reasoner"];
-      for (const modelName of deepseekModels) {
-        try {
-          let maxTokens = 500;
-          if (body.role === "counsel") maxTokens = 400;
-          if (body.role === "evaluator") maxTokens = 1500;
-
-          const completion = await deepseek.chat.completions.create({
-            model: modelName,
-            messages: [{ role: "user", content: optimizedPrompt }],
-            max_tokens: maxTokens,
-            temperature: 0.7,
-          });
-          text = completion.choices[0]?.message?.content || "";
-          if (text) {
-            return NextResponse.json({ result: text, usedModel: "DeepSeek" });
-          }
-        } catch (err: unknown) {
-          lastError = err instanceof Error ? err.message : String(err);
-        }
-      }
-      // If preferred was DeepSeek but it failed, and we aren't allowed to switch mid-session
-      if (preferredModel === "DeepSeek") {
-        return NextResponse.json({
-          error: `Primary model (DeepSeek) failed: ${lastError}`,
-        }, { status: 500 });
-      }
+    // Enforce Gemini for briefing-pro as per user request
+    if (tool === "briefing-pro") {
+      preferredModel = "Gemini";
     }
+
+    // --- LLM PRIORITY: GEMINI -> OPENAI ---
+
+
 
     // 2. Fallback to Gemini
     if (
@@ -285,9 +276,8 @@ export async function POST(req: Request) {
       process.env.GEMINI_API_KEY
     ) {
       const geminiModels = [
-        "gemini-3-flash-preview",
-        "gemini-2.5-flash",
-        "gemini-2.5-pro",
+        "gemini-3-flash",
+        "gemini-3.1-flash-lite",
       ];
       for (const modelName of geminiModels) {
         try {
@@ -353,7 +343,7 @@ export async function POST(req: Request) {
     if (!text) {
       return NextResponse.json({
         error:
-          `AI call failed. Priority: DeepSeek -> Gemini -> OpenAI. Last error: ${lastError}`,
+          `AI call failed. Priority: Gemini -> OpenAI. Last error: ${lastError}`,
       }, { status: 500 });
     }
 

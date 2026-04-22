@@ -54,13 +54,13 @@ function AIHallucinationModal({ toolName, onConfirm, onClose }: { toolName: stri
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/80 backdrop-blur-xl p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl border border-rose-100 flex flex-col gap-8 relative overflow-hidden"
       >
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-rose-500 via-amber-500 to-rose-500"></div>
-        
+
         <div className="flex flex-col items-center text-center">
           <div className="w-20 h-20 rounded-3xl bg-rose-50 text-rose-600 flex items-center justify-center mb-6 ring-4 ring-rose-50">
             <Scale size={40} />
@@ -96,7 +96,7 @@ function AIHallucinationModal({ toolName, onConfirm, onClose }: { toolName: stri
 export default function ToolkitPage() {
   const [user, setUser] = useState<any>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [pendingTool, setPendingTool] = useState<{id: string, title: string, href: string} | null>(null);
+  const [pendingTool, setPendingTool] = useState<{ id: string, title: string, href: string } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -133,6 +133,15 @@ export default function ToolkitPage() {
       href: "/toolkit/story-visualizer",
       color: "from-emerald-500 to-teal-600",
       badge: "Statute Narrative"
+    },
+    {
+      id: "briefing-pro",
+      title: "Briefing Pro",
+      description: "Upload case documents or paste facts to generate a professional case brief using Gemini 3 Flash.",
+      icon: Scale,
+      href: "/toolkit/briefing-pro",
+      color: "from-blue-600 to-indigo-700",
+      badge: "Gemini 3 Flash"
     }
   ];
 
@@ -148,19 +157,19 @@ export default function ToolkitPage() {
   return (
     <div className="min-h-screen bg-slate-50 pt-32 pb-24 px-4 sm:px-6 font-sans">
       {showLoginModal && <LoginRequiredModal onClose={() => setShowLoginModal(false)} />}
-      
+
       {pendingTool && (
-        <AIHallucinationModal 
-          toolName={pendingTool.title} 
+        <AIHallucinationModal
+          toolName={pendingTool.title}
           onConfirm={() => {
             router.push(pendingTool.href);
             setPendingTool(null);
-          }} 
-          onClose={() => setPendingTool(null)} 
+          }}
+          onClose={() => setPendingTool(null)}
         />
       )}
-      
-      <div className="max-w-4xl mx-auto">
+
+      <div className="max-w-6xl mx-auto">
         <div className="mb-12 text-center">
           <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 rounded-2xl mb-4 ring-1 ring-indigo-500/30">
             <Boxes size={32} className="text-indigo-600" />
@@ -171,12 +180,12 @@ export default function ToolkitPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {tools.map((tool) => {
             const Icon = tool.icon;
             return (
-              <div 
-                key={tool.id} 
+              <div
+                key={tool.id}
                 onClick={(e) => handleToolClick(e, tool)}
                 className="group relative bg-white border border-slate-200 rounded-3xl p-8 shadow-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-2 hover:border-indigo-500/20 flex flex-col items-center text-center overflow-hidden cursor-pointer"
               >
