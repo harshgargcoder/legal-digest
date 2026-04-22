@@ -83,27 +83,65 @@ export async function POST(req: NextRequest) {
         const safeDesc = description || "No detailed description provided. Assume this is a breaking news headline or live event.";
 
         const prompt = `
-        Analyze this legal news article and extract structured information.
+You are a legal news analyst. Analyze the following legal news article and extract structured information.
 
-        Return in this format:
+STRICT RULES:
+- Only include fields clearly supported by the article. Write "Not mentioned" if absent — never fabricate.
+- Keep each point concise (1–2 sentences max).
+- "Quick Summary" must be 2–3 lines max, written in plain simple language (non-legal).
 
-        Court or authority: ...
-        Legal issue: ...
+Return EXACTLY in this format (preserve all headers):
 
-        Relevant precedents:
-        - case 1
-        - case 2
+Quick Summary:
+[2–3 line plain-English summary of what happened, who was involved, and what the result was. No legal jargon.]
 
-        Current outcome:
-        - point 1
-        - point 2
-        - point 3
+Court or Authority: ...
+Legal Issue: ...
+Jurisdiction: ...
 
-        Tags: tag1, tag2, tag3
+Upcoming / Scheduled Hearings:
+- [Date if known] – [Hearing type] – [Court/Bench if mentioned]
+- Or: Not mentioned
 
-        Title: ${safeTitle}
-        Content: ${safeDesc}
-        `;
+Past Hearings & Proceedings:
+- [Date if known] – [What happened]
+- Or: Not mentioned
+
+Key Points Discussed in Hearing:
+- [Most important argument or point raised — by either side or the bench]
+- [Second key point]
+- [Third key point]
+- Or: Not mentioned
+
+Legal Articles / Sections Cited:
+- [Article or Section name/number] – [What it covers] – [How it was applied or challenged in this case]
+- Or: Not mentioned
+
+Changes / Amendments Noted:
+- [Any rule, law, or order that was modified, introduced, or struck down]
+- Or: Not mentioned
+
+Final Result / Order:
+- [What the court decided or ordered — clear and direct]
+- Or: Pending / Not mentioned
+
+Relevant Precedents:
+- [Case name + brief relevance]
+- Or: Not mentioned
+
+Key Parties Involved:
+- [Petitioner / Plaintiff]: ...
+- [Respondent / Defendant]: ...
+- [Judge / Bench]: ...
+
+Tags: tag1, tag2, tag3
+
+---
+Title: ${safeTitle}
+Content: ${safeDesc}
+
+Do not add any commentary, markdown formatting, or extra explanation. Return only the structured format above.
+`;
 
         const modelsToTry = [
             "gemini-3-flash-preview",
@@ -183,13 +221,13 @@ export async function POST(req: NextRequest) {
         // Cache the result into the database for the Case Linkage Graph
         if (id) {
             await supabase
-              .from("legal_news")
-              .update({
-                  ai_summary: summary,
-                  tags: tags,
-                  precedents: precedents
-              })
-              .eq("id", id);
+                .from("legal_news")
+                .update({
+                    ai_summary: summary,
+                    tags: tags,
+                    precedents: precedents
+                })
+                .eq("id", id);
         }
 
         return NextResponse.json({

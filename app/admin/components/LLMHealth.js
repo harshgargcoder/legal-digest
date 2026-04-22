@@ -62,7 +62,7 @@ export default function LLMHealth({ groqTpm, lastError, stats }) {
             </p>
           </div>
           <div className="p-4 rounded-2xl bg-slate-950/50 border border-slate-800">
-            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">DeepSeek Fallback</p>
+            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">System Error Rate</p>
             <p className="text-lg font-black text-white">
               {((stats.apiCallsToday.failure / (stats.apiCallsToday.success + stats.apiCallsToday.failure || 1)) * 100).toFixed(1)}%
             </p>

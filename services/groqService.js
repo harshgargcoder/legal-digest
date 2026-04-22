@@ -1,11 +1,10 @@
 /**
  * Groq Service for AI Moot Court
- * Handles LLM calls with fallback to DeepSeek, token counting, 
+ * Handles LLM calls, token counting, 
  * and strict judicial prompts.
  */
 
 const GROQ_API_KEY = process.env.NEXT_PUBLIC_GROQ_API_KEY || "";
-const DEEPSEEK_API_KEY = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY || "";
 
 /**
  * Approximates token count based on the char/4 rule.
@@ -60,7 +59,7 @@ async function fetchWithRetry(url, options, retries = 3, backoff = 1000) {
 }
 
 /**
- * Calls Groq API with DeepSeek fallback.
+ * Calls Groq API.
  */
 async function callLLM(prompt, maxTokens = 500) {
   const payload = {
@@ -82,25 +81,8 @@ async function callLLM(prompt, maxTokens = 500) {
     });
     return data.choices[0].message.content;
   } catch (groqError) {
-    console.error("Groq failed, falling back to DeepSeek:", groqError);
-    
-    // Fallback to DeepSeek
-    try {
-      const dsData = await fetchWithRetry("https://api.deepseek.com/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${DEEPSEEK_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          ...payload,
-          model: "deepseek-chat"
-        }),
-      });
-      return dsData.choices[0].message.content;
-    } catch (dsError) {
-      throw new Error("Both Groq and DeepSeek failed.");
-    }
+    console.error("Groq API failed:", groqError);
+    throw new Error(`AI Service Unavailable: ${groqError.message}`);
   }
 }
 
