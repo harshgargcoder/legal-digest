@@ -218,84 +218,117 @@ export async function POST(req: Request) {
     timestamps.push(now);
     rateLimitMap.set(clientIP, timestamps);
 
-    const geminiModels = [
-      "gemini-3.1-pro",
-      "gemini-3-flash",
-      "gemini-3.1-flash-lite",
-      "gemini-3.1-flash-live",
-      "nano-banana-pro",
-      "nano-banana-2",
-      "gemini-2.5-pro",
-      "gemini-2.5-flash",
-      "gemini-2.5-flash-lite",
-      "gemini-2.0-flash",
-      "gemini-1.5-pro",
-      "gemini-1.5-flash",
-    ];
+    // --- TRANSCRIPT TRUNCATION ---
+    // We truncate the context to keep it within safe token limits
+    const { truncateTranscript } = await import("@/lib/moot-court-utils");
+    const optimizedContext = context ? truncateTranscript(context, 2000) : "";
 
-    const openaiModels = [
-      "gpt-5.4",
-      "gpt-5.4-mini",
-      "gpt-5.3-codex",
-      "gpt-5.2-codex",
-      "gpt-5.2",
-      "gpt-5.1-codex-max",
-      "gpt-5.1-codex-mini",
-      "gpt-4o",
-      "gpt-4o-mini",
-    ];
+    // Re-build prompt with optimized context if applicable
+    if (tool === "moot-court") {
+      // Find where context was inserted and replace it
+      prompt = prompt.replace(context, optimizedContext);
+    }
+
+    const MAX_INPUT_CHARS = 8000;
+    const optimizedPrompt = prompt.length > MAX_INPUT_CHARS
+      ? prompt.substring(0, 1500) + "\n... [TRUNCATED] ...\n" +
+        prompt.substring(prompt.length - 6000)
+      : prompt;
 
     let text = "";
     let lastError = "";
+    const preferredModel = body.preferredModel; // 'DeepSeek', 'Gemini', or 'OpenAI'
 
-    // --- HYPER-CONSERVATIVE TOKEN MANAGEMENT ---
-    // User ratio: 1 char ≈ 0.3 tokens. 
-    // We want to keep total tokens (Input + Output) well under model limits.
-    // Max Input Chars: 4000 (~1200 tokens)
-    const MAX_INPUT_CHARS = 4000;
-    const optimizedPrompt = prompt.length > MAX_INPUT_CHARS
-      ? prompt.substring(0, 800) + "\n... [TRUNCATED FOR TOKEN SAFETY] ...\n" + prompt.substring(prompt.length - 3000)
-      : prompt;
+    // --- LLM PRIORITY: DEEPSEEK -> GEMINI -> OPENAI ---
 
-    // Try Gemini models first
-    for (const modelName of geminiModels) {
-      try {
-        const model = genAI.getGenerativeModel({ 
-          model: modelName,
-          safetySettings: [
-            { category: "HARM_CATEGORY_HARASSMENT" as any, threshold: "BLOCK_NONE" as any },
-            { category: "HARM_CATEGORY_HATE_SPEECH" as any, threshold: "BLOCK_NONE" as any },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT" as any, threshold: "BLOCK_NONE" as any },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT" as any, threshold: "BLOCK_NONE" as any }
-          ]
-        });
+    // 1. Try DeepSeek (Primary)
+    if (
+      (!preferredModel || preferredModel === "DeepSeek") &&
+      process.env.DEEPSEEK_API_KEY
+    ) {
+      const deepseek = new OpenAI({
+        apiKey: process.env.DEEPSEEK_API_KEY,
+        baseURL: "https://api.deepseek.com",
+      });
+      const deepseekModels = ["deepseek-chat", "deepseek-reasoner"];
+      for (const modelName of deepseekModels) {
+        try {
+          let maxTokens = 500;
+          if (body.role === "counsel") maxTokens = 400;
+          if (body.role === "evaluator") maxTokens = 1500;
 
-        // Strict Max Output Tokens
-        let maxTokens = 400;
-        if (body.role === "evaluator") maxTokens = 1200;
-        if (modelName.includes("pro")) maxTokens = Math.min(maxTokens, 1500);
-        if (modelName.includes("flash") || modelName.includes("lite")) maxTokens = Math.min(maxTokens, 450);
-
-        const result = await model.generateContent({
-          contents: [{ role: "user", parts: [{ text: optimizedPrompt }] }],
-          generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
-        });
-        const response = await result.response;
-        text = response.text();
-        if (text) break;
-      } catch (err: unknown) {
-        lastError = err instanceof Error ? err.message : String(err);
+          const completion = await deepseek.chat.completions.create({
+            model: modelName,
+            messages: [{ role: "user", content: optimizedPrompt }],
+            max_tokens: maxTokens,
+            temperature: 0.7,
+          });
+          text = completion.choices[0]?.message?.content || "";
+          if (text) {
+            return NextResponse.json({ result: text, usedModel: "DeepSeek" });
+          }
+        } catch (err: unknown) {
+          lastError = err instanceof Error ? err.message : String(err);
+        }
+      }
+      // If preferred was DeepSeek but it failed, and we aren't allowed to switch mid-session
+      if (preferredModel === "DeepSeek") {
+        return NextResponse.json({
+          error: `Primary model (DeepSeek) failed: ${lastError}`,
+        }, { status: 500 });
       }
     }
 
-    // Fallback to OpenAI
-    if (!text && process.env.OPENAI_API_KEY) {
+    // 2. Fallback to Gemini
+    if (
+      !text && (!preferredModel || preferredModel === "Gemini") &&
+      process.env.GEMINI_API_KEY
+    ) {
+      const geminiModels = [
+        "gemini-3-flash-preview",
+        "gemini-2.5-flash",
+        "gemini-2.5-pro",
+      ];
+      for (const modelName of geminiModels) {
+        try {
+          const model = genAI.getGenerativeModel({ model: modelName });
+
+          let maxTokens = 500;
+          if (body.role === "counsel") maxTokens = 400;
+          if (body.role === "evaluator") maxTokens = 1200;
+
+          const result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: optimizedPrompt }] }],
+            generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
+          });
+          const response = await result.response;
+          text = response.text();
+          if (text) {
+            return NextResponse.json({ result: text, usedModel: "Gemini" });
+          }
+        } catch (err: unknown) {
+          lastError = err instanceof Error ? err.message : String(err);
+        }
+      }
+      if (preferredModel === "Gemini") {
+        return NextResponse.json({
+          error: `Selected model (Gemini) failed: ${lastError}`,
+        }, { status: 500 });
+      }
+    }
+
+    // 3. Fallback to OpenAI
+    if (
+      !text && (!preferredModel || preferredModel === "OpenAI") &&
+      process.env.OPENAI_API_KEY
+    ) {
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      const openaiModels = ["gpt-4o-mini", "gpt-4o"];
       for (const modelName of openaiModels) {
         try {
-          let maxTokens = 400;
-          if (modelName.includes("5.4") && !modelName.includes("mini")) maxTokens = 800;
-          if (modelName.includes("mini") || modelName.includes("codex")) maxTokens = 250;
+          let maxTokens = 500;
+          if (body.role === "counsel") maxTokens = 400;
+          if (body.role === "evaluator") maxTokens = 1000;
 
           const completion = await openai.chat.completions.create({
             model: modelName,
@@ -303,41 +336,24 @@ export async function POST(req: Request) {
             max_tokens: maxTokens,
           });
           text = completion.choices[0]?.message?.content || "";
-          if (text) break;
+          if (text) {
+            return NextResponse.json({ result: text, usedModel: "OpenAI" });
+          }
         } catch (err: unknown) {
           lastError = err instanceof Error ? err.message : String(err);
         }
       }
-    }
-
-    // Fallback to DeepSeek
-    if (!text && process.env.DEEPSEEK_API_KEY) {
-      const deepseek = new OpenAI({ 
-        apiKey: process.env.DEEPSEEK_API_KEY,
-        baseURL: "https://api.deepseek.com"
-      });
-      const deepseekModels = ["deepseek-chat", "deepseek-reasoner"];
-      for (const modelName of deepseekModels) {
-        try {
-          let maxTokens = 500;
-          if (modelName === "deepseek-reasoner") maxTokens = 1000;
-
-          const completion = await deepseek.chat.completions.create({
-            model: modelName,
-            messages: [{ role: "user", content: optimizedPrompt }],
-            max_tokens: maxTokens,
-          });
-          text = completion.choices[0]?.message?.content || "";
-          if (text) break;
-        } catch (err: unknown) {
-          lastError = err instanceof Error ? err.message : String(err);
-        }
+      if (preferredModel === "OpenAI") {
+        return NextResponse.json({
+          error: `Selected model (OpenAI) failed: ${lastError}`,
+        }, { status: 500 });
       }
     }
 
     if (!text) {
       return NextResponse.json({
-        error: `All AI models (Gemini, OpenAI, & DeepSeek) failed to respond. Last error: ${lastError}`,
+        error:
+          `AI call failed. Priority: DeepSeek -> Gemini -> OpenAI. Last error: ${lastError}`,
       }, { status: 500 });
     }
 

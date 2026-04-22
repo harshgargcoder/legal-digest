@@ -60,6 +60,19 @@ export default function Navbar() {
 
   useEffect(() => {
     setMounted(true);
+    
+    const checkHash = () => {
+      if (window.location.hash === "#login") {
+        setAuthOpen(true);
+        // Clear hash after opening to allow re-triggering
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+    };
+
+    window.addEventListener("hashchange", checkHash);
+    checkHash(); // Check on initial load too
+
+    return () => window.removeEventListener("hashchange", checkHash);
   }, []);
 
   useEffect(() => {
