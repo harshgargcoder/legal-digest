@@ -1,283 +1,738 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { MessageSquare, X, Send, Bot, User, Loader2, Sparkles, Scale, HelpCircle, Headphones, Info } from "lucide-react";
-import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import {
+  ArrowUpRight,
+  Bot,
+  Gavel,
+  HelpCircle,
+  Loader2,
+  MessageSquare,
+  Scale,
+  Search,
+  Send,
+  Sparkles,
+  Trophy,
+  Users,
+  X,
+} from "lucide-react";
 
-const Typewriter = ({ text, speed = 10, onComplete }: { text: string; speed?: number; onComplete?: () => void }) => {
-  const [displayedText, setDisplayedText] = useState("");
-  const [index, setIndex] = useState(0);
+type ChatRole = "user" | "assistant";
+type ChatKind = "text" | "case-results" | "trending";
 
-  useEffect(() => {
-    if (index < text.length) {
-      const timeout = setTimeout(() => {
-        setDisplayedText((prev) => prev + text[index]);
-        setIndex((prev) => prev + 1);
-      }, speed);
-      return () => clearTimeout(timeout);
-    } else if (onComplete) {
-      onComplete();
-    }
-  }, [index, text, speed, onComplete]);
-
-  return <ReactMarkdown>{displayedText}</ReactMarkdown>;
+type CaseSearchResult = {
+  id: string;
+  title: string;
+  summary?: string | null;
+  url: string;
+  source?: string | null;
+  published_at?: string | null;
+  category?: string | null;
+  region?: string | null;
 };
 
-export default function SupportBot() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<{ role: "user" | "bot"; content: string; status?: "typing" | "done" }[]>([
-    { role: "bot", content: "👋 Hi! I'm your **Legal Digest Intelligence Assistant**. How can I assist your research today?\n\nType `/` to see available commands.", status: "done" }
-  ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [showCommands, setShowCommands] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+type ChatMessage = {
+  id: string;
+  role: ChatRole;
+  kind?: ChatKind;
+  content: string;
+  results?: CaseSearchResult[];
+  topics?: string[];
+};
 
-  const commands = [
-    { cmd: "/help", desc: "Show platform guide", icon: <HelpCircle size={14} /> },
-    { cmd: "/customersupport", desc: "Contact support team", icon: <Headphones size={14} /> },
-    { cmd: "/about", desc: "About Legal Digest", icon: <Info size={14} /> },
-  ];
+type QuickAction = {
+  label: string;
+  icon: ReactNode;
+  onClick: () => void;
+};
+
+const STORAGE_KEY = "legal-digest-supportbot-v2";
+const MAX_HISTORY = 12;
+
+const WELCOME_MESSAGE: ChatMessage = {
+  id: "welcome",
+  role: "assistant",
+  kind: "text",
+  content:
+    "Hi, I'm the **Legal Digest Assistant**.\n\nI can help you search cases, explain the platform, open the trial simulator, show trending topics, and point you to the right feature. Try `/help`, `/search`, `/practice`, or `/trending`.",
+};
+
+const COMMANDS = [
+  { cmd: "/help", desc: "Show the platform guide" },
+  { cmd: "/search", desc: "Search cases by name or number" },
+  { cmd: "/practice", desc: "Open the trial simulator" },
+  { cmd: "/coach", desc: "Open coach mode" },
+  { cmd: "/trending", desc: "Show trending legal topics" },
+  { cmd: "/community", desc: "Open community insights" },
+  { cmd: "/leaderboard", desc: "View the leaderboard" },
+];
+
+function makeId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function normalizeQuery(value: string) {
+  return value
+    .replace(/^\/search\s*/i, "")
+    .replace(/^(search|find|lookup|look up)\s+/i, "")
+    .trim();
+}
+
+function looksLikeCaseSearch(value: string) {
+  const text = value.toLowerCase();
+  return (
+    /\b(v\.?|vs\.?)\b/.test(text) ||
+    /\bcase\b/.test(text) ||
+    /\bpetition\b/.test(text) ||
+    /\bappeal\b/.test(text) ||
+    /\bwp\s*\(/.test(text) ||
+    /\bslp\b/.test(text) ||
+    /\bcase\s*no\.?\b/.test(text) ||
+    /\b\d{1,5}\/\d{2,4}\b/.test(text) ||
+    /\bair\s*\d{4}\b/.test(text)
+  );
+}
+
+function isPlatformQuestion(value: string) {
+  const text = value.toLowerCase();
+  return (
+    text.includes("what is this platform") ||
+    text.includes("what is legal digest") ||
+    text.includes("what can you do") ||
+    text.includes("how do i use") ||
+    text.includes("how do i navigate") ||
+    text.includes("trial simulator") ||
+    text.includes("coach mode") ||
+    text.includes("case reader") ||
+    text.includes("community") ||
+    text.includes("leaderboard") ||
+    text.includes("region selector")
+  );
+}
+
+function buildPlatformGuide(lastCaseQuery?: string | null) {
+  const caseLine = lastCaseQuery
+    ? `I'm also remembering your last search: **${lastCaseQuery}**.`
+    : "I can remember the current conversation and keep your last search in context.";
+
+  return `### What Legal Digest does
+
+Legal Digest is a legal research and practice platform built around:
+
+1. **Case Reader** - browse and search judgments from Delhi HC, Punjab & Haryana HC, and the Supreme Court.
+2. **Trial Simulator** - practice oral arguments against an AI judge.
+3. **Coach Mode** - get live hints while you argue a case.
+4. **Region Selector** - filter content by legal region.
+5. **Community** - share research insights with other users.
+6. **Leaderboard** - compare practice performance.
+
+${caseLine}
+
+### Fast shortcuts
+- Use \`/search <case name or number>\` to search the case reader.
+- Use \`/practice\` to open the trial simulator.
+- Use \`/coach\` to jump into coach mode.
+- Use \`/trending\` to see what legal topics are hot right now.
+`;
+}
+
+export default function SupportBot() {
+  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([WELCOME_MESSAGE]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [lastCaseQuery, setLastCaseQuery] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setIsLoggedIn(!!user);
-    });
-    return () => unsubscribe();
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as ChatMessage[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        setMessages(parsed);
+      }
+    } catch {
+      // Ignore invalid cache.
+    }
   }, []);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(messages.slice(-24)));
+    } catch {
+      // Ignore cache write failures.
     }
-  }, [messages, isLoading]);
+  }, [messages]);
 
-  const handleCommand = (cmd: string) => {
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [messages, loading, isOpen]);
+
+  const appendMessage = (message: ChatMessage) => {
+    setMessages((prev) => [...prev, message]);
+  };
+
+  const replaceLastAssistant = (message: ChatMessage) => {
+    setMessages((prev) => {
+      const next = [...prev];
+
+      for (let i = next.length - 1; i >= 0; i -= 1) {
+        if (next[i].role === "assistant") {
+          next[i] = message;
+          return next;
+        }
+      }
+
+      return [...next, message];
+    });
+  };
+
+  const goTo = (path: string) => {
+    router.push(path);
+    setIsOpen(false);
+  };
+
+  const searchCases = async (query: string) => {
+    const trimmed = normalizeQuery(query);
+    if (!trimmed) {
+      appendMessage({
+        id: makeId(),
+        role: "assistant",
+        kind: "text",
+        content:
+          "Try `/search <case name or number>` and I'll look it up for you. Example: `/search Kesavananda Bharati`.",
+      });
+      return;
+    }
+
+    setLoading(true);
+    setLastCaseQuery(trimmed);
+    appendMessage({
+      id: makeId(),
+      role: "assistant",
+      kind: "text",
+      content: `Searching the case reader for **${trimmed}**...`,
+    });
+
+    try {
+      const res = await fetch(`/api/get-news?search=${encodeURIComponent(trimmed)}&limit=5`);
+      const data = await res.json();
+      const results = ((data?.articles || []) as CaseSearchResult[])
+        .filter((item) => item?.title && item?.url)
+        .slice(0, 5);
+
+      if (results.length === 0) {
+        replaceLastAssistant({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content:
+            `I couldn't find a close match for **${trimmed}** in the case reader.\n\n` +
+            "Try a different spelling, a shorter case name, or the case number. If you want, I can also take you straight to the trial simulator with this context.",
+        });
+        return;
+      }
+
+      replaceLastAssistant({
+        id: makeId(),
+        role: "assistant",
+        kind: "case-results",
+        content: `I found ${results.length} relevant case-reader results for **${trimmed}**.`,
+        results,
+      });
+    } catch (error: unknown) {
+      replaceLastAssistant({
+        id: makeId(),
+        role: "assistant",
+        kind: "text",
+        content:
+          error instanceof Error
+            ? `Search failed: ${error.message}`
+            : "Search failed. Please try again in a moment.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTrending = async () => {
+    setLoading(true);
+    appendMessage({
+      id: makeId(),
+      role: "assistant",
+      kind: "text",
+      content: "Fetching trending legal topics...",
+    });
+
+    try {
+      const res = await fetch("/api/summarize");
+      const data = await res.json();
+      const topics = (data?.trendingTopics || []).slice(0, 6) as string[];
+
+      if (topics.length === 0) {
+        replaceLastAssistant({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content:
+            "I couldn't detect any trending topics right now, but I can still search by case name, court, or issue.",
+        });
+        return;
+      }
+
+      replaceLastAssistant({
+        id: makeId(),
+        role: "assistant",
+        kind: "trending",
+        content: "Here are the current trending topics I'm seeing across recent legal news:",
+        topics,
+      });
+    } catch (error: unknown) {
+      replaceLastAssistant({
+        id: makeId(),
+        role: "assistant",
+        kind: "text",
+        content:
+          error instanceof Error
+            ? `Trending lookup failed: ${error.message}`
+            : "Trending lookup failed. Please try again.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCommand = async (commandLine: string) => {
+    const [command, ...rest] = commandLine.trim().split(/\s+/);
+    const arg = rest.join(" ").trim();
+
+    appendMessage({
+      id: makeId(),
+      role: "user",
+      content: commandLine,
+    });
     setInput("");
-    setShowCommands(false);
-    
-    let response = "";
-    if (cmd === "/help") {
-      response = "### 📚 Platform Guide\n\nWelcome to **Legal Digest**! Here's how you can use the platform:\n\n1. **Case Topology**: Visualize complex legal relationships.\n2. **AI Briefs**: Generate instant summaries of judgments.\n3. **Community Insights**: Share and read legal analysis.\n4. **News Feed**: Stay updated with real-time legal news.\n\n**Available Commands:**\n- `/help`: Show this guide\n- `/customersupport`: Get help from our team\n- `/about`: Learn about our mission";
-    } else if (cmd === "/customersupport") {
-      response = "### 🎧 Customer Support\n\nNeed direct assistance? Our team is here to help!\n\n- **Email**: support@legaldigest.com\n- **Hours**: Mon-Fri, 9 AM - 6 PM IST\n- **Response Time**: Usually within 24 hours\n\nOr just describe your issue here and I'll try my best to help!";
-    } else if (cmd === "/about") {
-      response = "### 🏛️ About Legal Digest\n\nLegal Digest is a next-generation intelligence platform for legal professionals. We leverage AI to transform how legal research is conducted, making it faster, more intuitive, and highly collaborative.";
-    }
 
-    setMessages((prev) => [
-      ...prev, 
-      { role: "user", content: cmd, status: "done" },
-      { role: "bot", content: response, status: "typing" }
-    ]);
+    switch (command.toLowerCase()) {
+      case "/help":
+        appendMessage({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content: buildPlatformGuide(lastCaseQuery),
+        });
+        return;
+      case "/search":
+        await searchCases(arg);
+        return;
+      case "/practice":
+      case "/coach":
+        appendMessage({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content: lastCaseQuery
+            ? `Opening the trial simulator. I'll keep **${lastCaseQuery}** in context while you practice.`
+            : "Opening the trial simulator. If you want, search a case first and I can help you rehearse that matter.",
+        });
+        goTo("/toolkit/moot-court");
+        return;
+      case "/community":
+        appendMessage({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content: "Opening Community Insights so you can browse or publish legal analysis.",
+        });
+        goTo("/community");
+        return;
+      case "/leaderboard":
+        appendMessage({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content: "Opening the leaderboard on the home page.",
+        });
+        goTo("/");
+        return;
+      case "/trending":
+        await fetchTrending();
+        return;
+      default:
+        appendMessage({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content: `I don't recognize **${command}**. Try \`/help\` to see the supported commands.`,
+        });
+    }
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    const trimmed = input.trim();
+    if (!trimmed || loading) return;
 
-    const userMessage = input.trim();
-    
-    if (userMessage.startsWith("/")) {
-      const foundCmd = commands.find(c => c.cmd === userMessage.split(" ")[0]);
-      if (foundCmd) {
-        handleCommand(foundCmd.cmd);
-        return;
-      }
+    if (trimmed.startsWith("/")) {
+      await handleCommand(trimmed);
+      return;
     }
 
+    appendMessage({
+      id: makeId(),
+      role: "user",
+      content: trimmed,
+    });
     setInput("");
-    setShowCommands(false);
-    setMessages((prev) => [...prev, { role: "user", content: userMessage, status: "done" }]);
-    setIsLoading(true);
+
+    if (looksLikeCaseSearch(trimmed)) {
+      await searchCases(trimmed);
+      return;
+    }
+
+    if (isPlatformQuestion(trimmed)) {
+      appendMessage({
+        id: makeId(),
+        role: "assistant",
+        kind: "text",
+        content: buildPlatformGuide(lastCaseQuery),
+      });
+      return;
+    }
+
+    setLoading(true);
 
     try {
-      const history = messages.map(m => ({
-        role: m.role === "user" ? "user" : "model",
-        content: m.content
+      const history = messages.slice(-MAX_HISTORY).map((message) => ({
+        role: message.role === "user" ? "user" : "model",
+        content: message.content,
       }));
 
       const res = await fetch("/api/support", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, history }),
+        body: JSON.stringify({ message: trimmed, history }),
       });
 
       const data = await res.json();
-      if (data.text) {
-        setMessages((prev) => [...prev, { role: "bot", content: data.text, status: "typing" }]);
-      } else {
-        throw new Error("Empty response");
+
+      if (data?.text) {
+        appendMessage({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content: data.text,
+        });
+        return;
       }
-    } catch (error) {
-      setMessages((prev) => [...prev, { role: "bot", content: "I'm having a bit of trouble connecting to my knowledge base. Please try again or use `/customersupport`.", status: "typing" }]);
+
+      throw new Error("Empty response from assistant");
+    } catch (error: unknown) {
+      appendMessage({
+        id: makeId(),
+        role: "assistant",
+        kind: "text",
+        content:
+          error instanceof Error
+            ? `I hit a snag talking to the support model: ${error.message}`
+            : "I hit a snag talking to the support model. Please try again.",
+      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const onInputChange = (val: string) => {
-    setInput(val);
-    if (val === "/") {
-      setShowCommands(true);
-    } else if (!val.startsWith("/")) {
-      setShowCommands(false);
+  const quickActions: QuickAction[] = [
+    {
+      label: "Search cases",
+      icon: <Search size={14} />,
+      onClick: () => {
+        setInput(lastCaseQuery ? `/search ${lastCaseQuery}` : "/search ");
+        inputRef.current?.focus();
+      },
+    },
+    {
+      label: "Trial simulator",
+      icon: <Gavel size={14} />,
+      onClick: () => {
+        appendMessage({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content: "Opening the trial simulator. You can practice oral arguments against the AI judge there.",
+        });
+        goTo("/toolkit/moot-court");
+      },
+    },
+    {
+      label: "Trending",
+      icon: <Sparkles size={14} />,
+      onClick: () => {
+        void fetchTrending();
+      },
+    },
+    {
+      label: "Platform help",
+      icon: <HelpCircle size={14} />,
+      onClick: () => {
+        appendMessage({
+          id: makeId(),
+          role: "assistant",
+          kind: "text",
+          content: buildPlatformGuide(lastCaseQuery),
+        });
+      },
+    },
+    {
+      label: "Community",
+      icon: <Users size={14} />,
+      onClick: () => goTo("/community"),
+    },
+    {
+      label: "Leaderboard",
+      icon: <Trophy size={14} />,
+      onClick: () => goTo("/"),
+    },
+  ];
+
+  const commandSuggestions = input.startsWith("/")
+    ? COMMANDS.filter((item) => item.cmd.startsWith(input.toLowerCase())).slice(0, 6)
+    : [];
+
+  const suggestionChips: QuickAction[] = lastCaseQuery
+    ? [
+        {
+          label: `Practice "${lastCaseQuery}"`,
+          icon: <Scale size={14} />,
+          onClick: () => {
+            appendMessage({
+              id: makeId(),
+              role: "assistant",
+              kind: "text",
+              content: `I'm keeping **${lastCaseQuery}** in context. Opening the trial simulator now.`,
+            });
+            goTo("/toolkit/moot-court");
+          },
+        },
+        ...quickActions,
+      ].slice(0, 6)
+    : quickActions.slice(0, 6);
+
+  const renderMessage = (message: ChatMessage) => {
+    if (message.kind === "case-results" && message.results?.length) {
+      return (
+        <div className="space-y-3">
+          <ReactMarkdown>{message.content}</ReactMarkdown>
+          <div className="space-y-2">
+            {message.results.map((result) => (
+              <a
+                key={result.id}
+                href={result.url}
+                target="_blank"
+                rel="noreferrer"
+                className="block rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:border-indigo-300 hover:bg-indigo-50"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-semibold text-slate-900">{result.title}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {[result.source, result.category, result.region].filter(Boolean).join(" • ")}
+                    </p>
+                  </div>
+                  <ArrowUpRight size={16} className="mt-1 shrink-0 text-indigo-600" />
+                </div>
+                {result.summary ? (
+                  <p className="mt-2 line-clamp-3 text-sm text-slate-600">{result.summary}</p>
+                ) : null}
+              </a>
+            ))}
+          </div>
+        </div>
+      );
     }
-  };
 
-  const markAsDone = (index: number) => {
-    setMessages(prev => prev.map((msg, i) => i === index ? { ...msg, status: "done" } : msg));
-  };
+    if (message.kind === "trending" && message.topics?.length) {
+      return (
+        <div className="space-y-4">
+          <ReactMarkdown>{message.content}</ReactMarkdown>
+          <div className="flex flex-wrap gap-2">
+            {message.topics.map((topic) => (
+              <button
+                key={topic}
+                onClick={() => setInput(`/search ${topic}`)}
+                className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
+              >
+                {topic}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
 
-  if (!isLoggedIn) return null;
+    return <ReactMarkdown>{message.content}</ReactMarkdown>;
+  };
 
   return (
-    <div className="fixed bottom-6 right-6 z-[9999] font-sans">
-      {/* Floating Button with Premium Glow */}
-      {!isOpen && (
+    <div className="fixed bottom-4 right-4 z-[9999] font-sans">
+      {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="w-14 h-14 bg-gradient-to-br from-indigo-600 to-violet-700 hover:from-indigo-500 hover:to-violet-600 text-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] flex items-center justify-center transition-all duration-500 hover:scale-110 active:scale-95 group relative overflow-hidden"
+          className="group relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white shadow-[0_8px_24px_-10px_rgba(79,70,229,0.55)] transition-all duration-300 hover:scale-105 active:scale-95"
+          aria-label="Open assistant"
         >
-          <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 animate-pulse"></div>
-          <div className="absolute top-0.5 right-0.5 w-4 h-4 bg-green-500 border-2 border-white rounded-full z-10 transition-transform duration-500 group-hover:scale-110 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
-          <MessageSquare size={24} className="group-hover:rotate-[15deg] transition-transform duration-500" />
+          <div className="absolute inset-0 bg-white/10 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+          <MessageSquare size={24} className="relative z-10" />
         </button>
-      )}
-
-      {/* Chat Window with Glassmorphism */}
-      {isOpen && (
-        <div className="bg-white/95 backdrop-blur-2xl border border-white/20 w-[calc(100vw-3rem)] sm:w-[420px] h-[600px] rounded-[2.5rem] shadow-[0_25px_80px_-15px_rgba(0,0,0,0.15)] flex flex-col overflow-hidden animate-in slide-in-from-bottom-8 fade-in duration-500">
-
-          {/* Premium Header */}
-          <div className="p-6 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 text-white flex items-center justify-between shadow-xl relative overflow-hidden">
-            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-            <div className="flex items-center gap-4 relative z-10">
-              <div className="w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center border border-white/20 shadow-inner group transition-all duration-500 hover:bg-white/30">
-                <Scale size={20} className="text-white group-hover:scale-110 transition-transform" />
+      ) : (
+        <div className="flex h-[min(70vh,620px)] w-[min(88vw,380px)] flex-col overflow-hidden rounded-[1.5rem] border border-slate-200 bg-white/96 shadow-[0_16px_50px_-18px_rgba(0,0,0,0.25)] backdrop-blur-xl sm:w-[380px]">
+          <div className="relative flex items-center justify-between overflow-hidden bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-700 p-4 text-white">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_35%)]" />
+            <div className="relative z-10 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
+                <Bot size={20} />
               </div>
               <div>
-                <h3 className="font-extrabold text-base tracking-tight">Intelligence Bot</h3>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.8)]"></span>
-                  <span className="text-[10px] text-indigo-100 uppercase tracking-[0.2em] font-black">AI Researcher</span>
-                </div>
+                <h3 className="text-[13px] font-bold tracking-wide">Legal Digest Assistant</h3>
+                <p className="text-[9px] uppercase tracking-[0.24em] text-indigo-100">
+                  Search, guide, practice, repeat
+                </p>
               </div>
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className="p-2.5 hover:bg-white/20 rounded-xl transition-all duration-300 hover:rotate-90 relative z-10"
+              className="relative z-10 rounded-lg p-1.5 transition hover:bg-white/15"
+              aria-label="Close assistant"
             >
-              <X size={20} />
+              <X size={18} />
             </button>
           </div>
 
-          {/* Messages Area */}
-          <div
-            ref={scrollRef}
-            className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth bg-gradient-to-b from-slate-50 to-white"
-          >
-            {messages.map((msg, i) => (
+          <div ref={scrollRef} className="flex-1 space-y-4 overflow-y-auto bg-gradient-to-b from-slate-50 to-white p-3 sm:p-4">
+            {messages.map((message) => (
               <div
-                key={i}
-                className={`flex items-start gap-3 ${msg.role === "user" ? "flex-row-reverse" : "animate-in slide-in-from-left-2 duration-300"}`}
+                key={message.id}
+                className={`flex items-start gap-3 ${message.role === "user" ? "flex-row-reverse" : ""}`}
               >
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm ${msg.role === "user"
-                    ? "bg-indigo-600 text-white"
-                    : "bg-white text-indigo-600 border border-indigo-100"
-                  }`}>
-                  {msg.role === "user" ? <User size={18} /> : <Scale size={18} />}
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg shadow-sm ${
+                    message.role === "user"
+                      ? "bg-indigo-600 text-white"
+                      : "border border-indigo-100 bg-white text-indigo-600"
+                  }`}
+                >
+                  {message.role === "user" ? <Scale size={15} /> : <Bot size={15} />}
                 </div>
-                <div className={`max-w-[82%] p-4 text-sm leading-relaxed shadow-sm transition-all duration-300 ${msg.role === "user"
-                    ? "bg-indigo-600 text-white rounded-3xl rounded-tr-none"
-                    : "bg-white text-gray-800 border border-slate-100 rounded-3xl rounded-tl-none hover:border-indigo-200"
-                  }`}>
-                  <div className={`prose prose-sm max-w-none ${msg.role === "user" ? "prose-invert" : "text-slate-700"}`}>
-                    {msg.role === "bot" && msg.status === "typing" ? (
-                      <Typewriter text={msg.content} onComplete={() => markAsDone(i)} />
+                <div
+                  className={`max-w-[84%] rounded-2xl p-3 text-[13px] leading-relaxed shadow-sm ${
+                    message.role === "user"
+                      ? "rounded-tr-none bg-indigo-600 text-white"
+                      : "rounded-tl-none border border-slate-100 bg-white text-slate-800"
+                  }`}
+                >
+                  {message.role === "assistant" ? (
+                    loading && message === messages[messages.length - 1] ? (
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <Loader2 size={13} className="animate-spin" />
+                        <span>Working...</span>
+                      </div>
                     ) : (
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    )}
-                  </div>
+                      renderMessage(message)
+                    )
+                  ) : (
+                    <p>{message.content}</p>
+                  )}
                 </div>
               </div>
             ))}
-            {isLoading && (
-              <div className="flex items-start gap-3 animate-in fade-in duration-300">
-                <div className="w-9 h-9 rounded-xl bg-white border border-indigo-100 flex items-center justify-center text-indigo-600">
-                  <Loader2 size={18} className="animate-spin" />
+
+            {loading ? (
+              <div className="flex items-start gap-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-indigo-100 bg-white text-indigo-600 shadow-sm">
+                  <Loader2 size={14} className="animate-spin" />
                 </div>
-                <div className="bg-white border border-slate-100 p-4 rounded-3xl rounded-tl-none shadow-sm">
-                  <div className="flex gap-1.5">
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.2s]"></div>
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:0.4s]"></div>
-                  </div>
+                <div className="rounded-2xl rounded-tl-none border border-slate-100 bg-white p-3 text-sm text-slate-500 shadow-sm">
+                  Searching the platform...
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
 
-          {/* Input Section */}
-          <div className="p-6 border-t border-slate-100 bg-white/80 backdrop-blur-md relative">
-            {/* Command Suggestions */}
-            {showCommands && (
-              <div className="absolute bottom-full left-6 right-6 mb-2 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300 z-50">
-                <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center gap-2">
-                  <Sparkles size={12} className="text-indigo-500" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Available Commands</span>
-                </div>
-                <div className="max-h-48 overflow-y-auto">
-                  {commands.map((c) => (
-                    <button
-                      key={c.cmd}
-                      onClick={() => handleCommand(c.cmd)}
-                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-indigo-50 transition-colors text-left group"
-                    >
-                      <div className="p-2 bg-slate-100 rounded-lg text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-                        {c.icon}
-                      </div>
-                      <div>
-                        <div className="text-sm font-bold text-slate-800 group-hover:text-indigo-700">{c.cmd}</div>
-                        <div className="text-[11px] text-slate-500">{c.desc}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-[2rem] px-5 py-2 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500/50 transition-all duration-300 shadow-inner group">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => onInputChange(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
-                placeholder="Message your research assistant..."
-                className="flex-1 bg-transparent text-sm py-3 text-slate-800 focus:outline-none placeholder:text-slate-400 font-medium"
-              />
-              <button
-                onClick={handleSend}
-                disabled={isLoading || !input.trim()}
-                className="p-3 bg-gradient-to-br from-indigo-600 to-violet-700 hover:from-indigo-500 hover:to-violet-600 disabled:opacity-40 disabled:grayscale text-white rounded-2xl transition-all duration-300 shadow-lg shadow-indigo-600/20 active:scale-90 flex-shrink-0"
-              >
-                <Send size={20} />
-              </button>
+          <div className="border-t border-slate-100 bg-white/90 p-3 backdrop-blur">
+            <div className="mb-2.5 flex flex-wrap gap-1.5">
+              {suggestionChips.map((chip) => (
+                <button
+                  key={chip.label}
+                  onClick={chip.onClick}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700"
+                >
+                  {chip.icon}
+                  {chip.label}
+                </button>
+              ))}
             </div>
-            <div className="flex items-center justify-center gap-2 mt-4">
-              <div className="flex gap-1">
-                {[...Array(3)].map((_, i) => (
-                   <div key={i} className="w-1 h-1 bg-slate-200 rounded-full"></div>
-                ))}
+
+            <div className="relative">
+              {commandSuggestions.length > 0 ? (
+                <div className="absolute bottom-full left-0 right-0 mb-2 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+                  <div className="border-b border-slate-100 bg-slate-50 px-3 py-2">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Commands</p>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {commandSuggestions.map((item) => (
+                      <button
+                        key={item.cmd}
+                        onClick={() => setInput(`${item.cmd} `)}
+                        className="flex w-full items-center justify-between px-3 py-2.5 text-left transition hover:bg-indigo-50"
+                      >
+                        <span className="text-[13px] font-semibold text-slate-800">{item.cmd}</span>
+                        <span className="text-[11px] text-slate-500">{item.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex items-center gap-2.5 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2.5 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handleSend();
+                    }
+                  }}
+                  placeholder="Ask about cases, features, coach mode, /search, /help..."
+                  className="flex-1 bg-transparent text-[13px] text-slate-800 outline-none placeholder:text-slate-400"
+                />
+                <button
+                  onClick={() => void handleSend()}
+                  disabled={!input.trim() || loading}
+                  className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 text-white transition hover:from-indigo-500 hover:to-violet-600 disabled:opacity-40"
+                  aria-label="Send message"
+                >
+                  <Send size={15} />
+                </button>
               </div>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em]">AI-Powered Intelligence</p>
-              <div className="flex gap-1">
-                {[...Array(3)].map((_, i) => (
-                   <div key={i} className="w-1 h-1 bg-slate-200 rounded-full"></div>
-                ))}
-              </div>
+            </div>
+
+            <div className="mt-2.5 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+              <span>Case search enabled</span>
+              <span>Context aware</span>
             </div>
           </div>
         </div>
@@ -285,4 +740,3 @@ export default function SupportBot() {
     </div>
   );
 }
-

@@ -49,6 +49,7 @@ export interface EvaluationResult {
 
 export interface FirebaseUser {
   uid: string;
+  getIdToken: () => Promise<string>;
 }
 
 export interface SpeechRecognitionResultLike {

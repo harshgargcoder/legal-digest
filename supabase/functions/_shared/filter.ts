@@ -35,6 +35,10 @@ export interface ProcessedArticle {
   published_at: string;
 }
 
+const MAX_TEXT_LENGTH = 5000;
+const MAX_TITLE_LENGTH = 300;
+const MAX_SOURCE_LENGTH = 120;
+
 const buildRegex = (keywords: string[]) =>
   new RegExp(`\\b(${keywords.join("|")})\\b`, "i");
 
@@ -149,6 +153,47 @@ const indiaLegalRegex = buildRegex([
   "article 226",
 ]);
 
+export function sanitizeText(value: unknown, maxLength = MAX_TEXT_LENGTH) {
+  if (typeof value !== "string") return "";
+
+  return value
+    .replace(/<[^>]*>/g, " ")
+    .replace(/[\u0000-\u0008\u000B-\u001F\u007F]/g, " ")
+    .replace(/[\u202A-\u202E\u2066-\u2069]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, maxLength);
+}
+
+export function normalizeHttpUrl(value: unknown) {
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return null;
+    }
+
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+export function chunkArray<T>(items: T[], size: number) {
+  if (size <= 0) return [items];
+
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
 export function detectCategories(
   text: string,
   feedCategory?: Category,
@@ -224,29 +269,41 @@ export function detectRegion(
 export function processArticles(
   articles: RawArticle[],
 ): ProcessedArticle[] {
-  return articles.map((a) => {
-    const combinedText = `
-      ${a.title ?? ""}
-      ${a.description ?? ""}
-      ${a.content ?? ""}
-    `.trim();
+  return articles
+    .map((a) => {
+      const url = normalizeHttpUrl(a.url);
+      if (!url) return null;
 
-    return {
-      title: a.title,
-      summary: a.description ?? "",
-      content: a.content ?? "",
-      url: a.url,
-      image_url: a.urlToImage ?? null,
-      source: a.source?.name ?? "Unknown",
-      categories: detectCategories(
-        combinedText,
-        a.feedCategory,
-      ),
-      region: detectRegion(
-        combinedText,
-        a.feedCategory,
-      ),
-      published_at: a.publishedAt ?? new Date().toISOString(),
-    };
-  });
+      const title = sanitizeText(a.title, MAX_TITLE_LENGTH);
+      if (!title) return null;
+
+      const summary = sanitizeText(a.description);
+      const content = sanitizeText(a.content);
+      const imageUrl = normalizeHttpUrl(a.urlToImage);
+      const source = sanitizeText(a.source?.name ?? "Unknown", MAX_SOURCE_LENGTH) || "Unknown";
+      const combinedText = `
+        ${title}
+        ${summary}
+        ${content}
+      `.trim();
+
+      return {
+        title,
+        summary,
+        content,
+        url,
+        image_url: imageUrl,
+        source,
+        categories: detectCategories(
+          combinedText,
+          a.feedCategory,
+        ),
+        region: detectRegion(
+          combinedText,
+          a.feedCategory,
+        ),
+        published_at: a.publishedAt ?? new Date().toISOString(),
+      };
+    })
+    .filter((article): article is ProcessedArticle => Boolean(article));
 }

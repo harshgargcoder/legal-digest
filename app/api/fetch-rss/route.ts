@@ -1,6 +1,16 @@
 import Parser from "rss-parser";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  enforceRateLimit,
+  getRouteErrorResponse,
+  requireScraperSecret,
+} from "@/lib/route-security";
+import {
+  chunkArray,
+  normalizeHttpUrl,
+  sanitizeText,
+} from "@/supabase/functions/_shared/filter";
 
 const parser = new Parser();
 
@@ -82,10 +92,20 @@ const globalFeeds = [
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    requireScraperSecret(req);
+    enforceRateLimit("fetch-rss", {
+      limit: 6,
+      windowMs: 60_000,
+    });
+
     let totalInserted = 0;
-    const feedStats: any[] = [];
+    type FeedStat =
+      | { feed: string; category?: string; region?: string; totalItems: number; inserted: number }
+      | { feed: string; category?: string; region?: string; error: string };
+    const feedStats: FeedStat[] = [];
+    const batchSize = 25;
 
     const allFeeds = [
       ...supremeCourtFeeds,
@@ -104,13 +124,21 @@ export async function GET() {
         // Append timestamp to bypass caching at the source
         const cacheBusterUrl = feed.url + (feed.url.includes("?") ? "&" : "?") + `t=${Date.now()}`;
         const rss = await parser.parseURL(cacheBusterUrl);
+        const articles: Array<{
+          title: string;
+          url: string;
+          category?: string;
+          summary: string;
+          region?: string;
+          published_at: string;
+        }> = [];
 
         let insertedForFeed = 0;
 
         for (const item of rss.items) {
-          const title = item.title?.trim();
-          const description = item.contentSnippet?.trim() || "";
-          const link = item.link?.trim();
+          const title = sanitizeText(item.title, 300);
+          const description = sanitizeText(item.contentSnippet || "", 5000);
+          const link = normalizeHttpUrl(item.link);
 
           if (!title || !link) continue;
 
@@ -125,17 +153,21 @@ export async function GET() {
               : new Date().toISOString(),
           };
 
-          const { data, error } = await supabase
+          articles.push(payload);
+        }
+
+        for (const chunk of chunkArray(articles, batchSize)) {
+          const { error } = await supabase
             .from("legal_news")
-            .upsert(payload, { onConflict: "url" })
-            .select();
+            .upsert(chunk, { onConflict: "url" });
 
           if (error) {
             console.error("INSERT ERROR:", error.message);
-          } else {
-            insertedForFeed++;
-            totalInserted++;
+            continue;
           }
+
+          insertedForFeed += chunk.length;
+          totalInserted += chunk.length;
         }
 
         feedStats.push({
@@ -145,13 +177,14 @@ export async function GET() {
           totalItems: rss.items.length,
           inserted: insertedForFeed,
         });
-      } catch (feedError: any) {
-        console.error(`Error parsing feed ${feed.url}:`, feedError.message);
+      } catch (feedError: unknown) {
+        const message = feedError instanceof Error ? feedError.message : "Unknown feed error";
+        console.error(`Error parsing feed ${feed.url}:`, message);
         feedStats.push({
           feed: feed.url,
           category: feed.category,
           region: feed.region,
-          error: feedError.message,
+          error: message,
         });
       }
     }
@@ -166,10 +199,11 @@ export async function GET() {
       totalInserted,
       feeds: feedStats,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const { message, status } = getRouteErrorResponse(error);
     return NextResponse.json({
       success: false,
-      message: error?.message,
-    });
+      message,
+    }, { status });
   }
 }

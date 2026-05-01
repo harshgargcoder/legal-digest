@@ -33,9 +33,9 @@ export default function StoryVisualizerPage() {
       } else {
         throw new Error(data.error || "Failed to generate story");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err.message || "The storyteller encountered an error.");
+      setError(err instanceof Error ? err.message : "The storyteller encountered an error.");
     } finally {
       setLoading(false);
     }

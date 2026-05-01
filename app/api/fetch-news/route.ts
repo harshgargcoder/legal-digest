@@ -1,12 +1,24 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import {
+  enforceRateLimit,
+  getRouteErrorResponse,
+  requireScraperSecret,
+} from "@/lib/route-security";
+import {
   processArticles,
   RawArticle,
+  chunkArray,
 } from "@/supabase/functions/_shared/filter";
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    requireScraperSecret(req);
+    enforceRateLimit("fetch-news", {
+      limit: 6,
+      windowMs: 60_000,
+    });
+
     if (!process.env.NEWS_API_KEY) {
       throw new Error("NEWS_API_KEY missing");
     }
@@ -35,13 +47,14 @@ export async function POST() {
     );
 
     let insertedCount = 0;
+    const batchSize = 25;
 
-    for (const article of processed) {
+    for (const chunk of chunkArray(processed, batchSize)) {
       const { error } = await supabase
         .from("legal_news")
-        .upsert(article, { onConflict: "url" });
+        .upsert(chunk, { onConflict: "url" });
 
-      if (!error) insertedCount++;
+      if (!error) insertedCount += chunk.length;
       else console.error("Insert error:", error);
     }
 
@@ -50,12 +63,13 @@ export async function POST() {
       fetched: data.articles.length,
       inserted: insertedCount,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const { message, status } = getRouteErrorResponse(error);
     console.error("FETCH ERROR:", error);
 
     return NextResponse.json(
-      { success: false, error: error.message },
-      { status: 500 }
+      { success: false, error: message },
+      { status }
     );
   }
 }

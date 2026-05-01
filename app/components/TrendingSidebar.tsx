@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { TrendingUp, Hash, Layers, Zap } from "lucide-react";
+import { sanitizeText } from "@/supabase/functions/_shared/filter";
+import type { TrendingTopicsResponse } from "@/lib/api-types";
 
 type Props = {
   setSearch: (value: string) => void;
@@ -18,10 +20,10 @@ export default function TrendingSidebar({ setSearch }: Props) {
     const fetchTopics = async () => {
       try {
         const res = await fetch("/api/summarize");
-        const data = await res.json();
+        const data = (await res.json()) as TrendingTopicsResponse;
         if (data.trendingTopics) {
-          const formatted = data.trendingTopics.map((t: any) =>
-            Array.isArray(t) ? t[0] : t
+          const formatted = data.trendingTopics.map((t) =>
+            sanitizeText(t, 60)
           );
           setTopics(formatted);
         }

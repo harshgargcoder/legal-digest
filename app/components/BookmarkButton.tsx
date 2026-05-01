@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 function LoginRequiredModal({ onClose }: { onClose: () => void }) {
   const [mounted, setMounted] = useState(false);
@@ -179,7 +179,7 @@ function LoginRequiredModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function BookmarkButton({ postId }: { postId: string }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [bookmarked, setBookmarked] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
 

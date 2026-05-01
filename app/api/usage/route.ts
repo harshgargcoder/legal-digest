@@ -5,6 +5,13 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+type UsageMetricRow = {
+  id: string;
+  user_id: string;
+  activity_date: string;
+  read_count: number;
+};
+
 export async function POST(req: Request) {
   try {
     const { userId } = await req.json();
@@ -36,8 +43,8 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -80,7 +87,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ streak: 0 }); // Streak broken
     }
 
-    const uniqueDates = Array.from(new Set(metrics.map(m => m.activity_date)));
+    const uniqueDates = Array.from(new Set((metrics as UsageMetricRow[]).map((m) => m.activity_date)));
 
     for (let i = 0; i < uniqueDates.length; i++) {
       const recordDate = new Date(uniqueDates[i]);
@@ -98,7 +105,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ streak });
 
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 }

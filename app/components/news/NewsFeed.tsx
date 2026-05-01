@@ -1,121 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import NewsCard from "./NewsCard";
-import { ArrowUpRight } from "lucide-react";
+import { useNewsFeed } from "./useNewsFeed";
+import type { NewsFeedProps } from "./types";
 
-interface Props {
-  category: string;
-  search: string;
-  region?: string;
-  preferences?: {
-    categories: string[];
-    topics: string[];
-  } | null;
-}
+export default function NewsFeed(props: NewsFeedProps) {
+  const { category } = props;
+  const { articles, loading, initialLoading, hasMore, error, loadMore, retry } =
+    useNewsFeed(props);
 
-export default function NewsFeed({ category, search, region, preferences }: Props) {
-  const [articles, setArticles] = useState<any[]>([]);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [initialLoading, setInitialLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-
-  // Cache handling
-  const getCacheKey = () => `news_cache_${category}_${search}_${region}`;
-
-  useEffect(() => {
-    // Load from cache first for instant UI
-    const cached = localStorage.getItem(getCacheKey());
-    if (cached) {
-      try {
-        const { data, timestamp } = JSON.parse(cached);
-        // If cache is less than 1 hour old (matching cron), use it
-        const isFresh = Date.now() - timestamp < 3600000;
-        setArticles(data);
-        if (isFresh) setInitialLoading(false);
-      } catch (e) {
-        localStorage.removeItem(getCacheKey());
-      }
-    }
-  }, [category, search, region]);
-
-  async function fetchNews(pageNumber = 1, reset = false) {
-    if (loading && !reset) return;
-
-    setLoading(true);
-
-    let url = `/api/get-news?page=${pageNumber}&limit=10`;
-
-    if (category && category !== "All") {
-      url += `&category=${encodeURIComponent(category)}`;
-    } else if (preferences?.categories && preferences.categories.length > 0) {
-      url += `&categories=${encodeURIComponent(preferences.categories.join(","))}`;
-    }
-
-    if (preferences?.topics && preferences.topics.length > 0) {
-      url += `&topics=${encodeURIComponent(preferences.topics.join(","))}`;
-    }
-
-    if (region) {
-      url += `&region=${encodeURIComponent(region)}`;
-    }
-
-    if (search) {
-      url += `&search=${encodeURIComponent(search)}`;
-    }
-
-    const res = await fetch(url);
-    const data = await res.json();
-    const newArticles = data.articles || [];
-
-    setArticles((prev) => {
-      let finalArticles;
-      if (reset) {
-        finalArticles = newArticles;
-      } else {
-        const seen = new Set(prev.map((a: any) => a.id));
-        const uniqueNew = newArticles.filter((a: any) => !seen.has(a.id));
-        finalArticles = [...prev, ...uniqueNew];
-      }
-
-      // Update cache on first page load
-      if (pageNumber === 1 && finalArticles.length > 0) {
-        localStorage.setItem(getCacheKey(), JSON.stringify({
-          data: finalArticles,
-          timestamp: Date.now()
-        }));
-      }
-      
-      return finalArticles;
-    });
-
-    setHasMore(newArticles.length === 10);
-    setLoading(false);
-    if (reset) setInitialLoading(false);
-  }
-
-  useEffect(() => {
-    setInitialLoading(true);
-    const delay = setTimeout(() => {
-      setArticles([]);
-      setPage(1);
-      setHasMore(true);
-      fetchNews(1, true);
-    }, 300);
-
-    return () => clearTimeout(delay);
-  }, [category, search, region, preferences]);
-
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    fetchNews(nextPage);
-  };
-
+  const featuredArticle = articles[0];
   const slicedArticles = articles.slice(1);
 
-  // Show a single centered spinner while the first page of results is loading
   if (initialLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24">
@@ -124,12 +20,30 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
     );
   }
 
+  if (error && articles.length === 0) {
+    return (
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-slate-300">
+        <p className="font-medium text-white">{error}</p>
+        <p className="mt-1 text-slate-400">
+          Please try again in a moment.
+        </p>
+        <button
+          type="button"
+          onClick={retry}
+          className="mt-4 rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-400"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
   return (
     <>
-      {articles.length > 0 && (
+      {featuredArticle && (
         <div className="mb-10">
           <NewsCard
-            item={articles[0]}
+            item={featuredArticle}
             index={0}
             isFeatured={true}
             activeCategory={category}
@@ -138,7 +52,7 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
       )}
 
       <div className="grid gap-6 sm:gap-8">
-        {slicedArticles.map((item: any, index: number) => (
+        {slicedArticles.map((item, index) => (
           <NewsCard
             key={item.id}
             item={item}
@@ -151,7 +65,7 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
       {hasMore && (
         <div className="flex justify-center mt-12 pb-12">
           <button
-            onClick={handleLoadMore}
+            onClick={loadMore}
             disabled={loading}
             className="
             px-8 py-3.5 rounded-full font-semibold transition-all duration-300 text-sm tracking-wide
@@ -160,10 +74,16 @@ export default function NewsFeed({ category, search, region, preferences }: Prop
           "
           >
             {loading && (
-              <span className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin"></span>
+              <span className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
             )}
             {loading ? "Loading..." : "Load Older Archives"}
           </button>
+        </div>
+      )}
+
+      {error && articles.length > 0 && (
+        <div className="mt-6 rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+          {error}
         </div>
       )}
     </>

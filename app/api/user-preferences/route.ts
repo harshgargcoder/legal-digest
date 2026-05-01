@@ -5,6 +5,14 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+type UserPreferencesRow = {
+  id: string;
+  categories: string[] | null;
+  topics: string[] | null;
+  role: string | null;
+  last_notified_at: string | null;
+};
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -25,9 +33,9 @@ export async function GET(req: Request) {
       throw error;
     }
 
-    return NextResponse.json({ preferences: data || null });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ preferences: (data as UserPreferencesRow | null) || null });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -69,7 +77,7 @@ export async function POST(req: Request) {
         console.error("Error updating preferences:", updateErr);
         throw updateErr;
       }
-      return NextResponse.json({ success: true, preferences: data[0] });
+      return NextResponse.json({ success: true, preferences: data[0] as UserPreferencesRow });
     } else {
       // Insert
       console.log("Inserting new preferences for user:", userId);
@@ -90,10 +98,10 @@ export async function POST(req: Request) {
         console.error("Error inserting preferences:", insertErr);
         throw insertErr;
       }
-      return NextResponse.json({ success: true, preferences: data[0] });
+      return NextResponse.json({ success: true, preferences: data[0] as UserPreferencesRow });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("User Preferences API Error:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 }

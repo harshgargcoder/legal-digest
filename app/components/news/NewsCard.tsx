@@ -7,19 +7,28 @@ import { Sparkles, Scale, BookOpen, Clock, ExternalLink, Volume2, Square, X, Cli
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import ReactMarkdown from "react-markdown";
+import {
+  normalizeHttpUrl,
+  sanitizeText,
+} from "@/supabase/functions/_shared/filter";
+import type { NewsArticle } from "./types";
 
 interface Props {
-  item: any;
+  item: NewsArticle;
   index: number;
   activeCategory?: string;
   isFeatured?: boolean;
 }
 
 export default function NewsCard({ item, index, isFeatured }: Props) {
+  const safeTitle = sanitizeText(item.title, 300) || "Untitled Legal Event";
+  const safeSummary = sanitizeText(item.summary || item.content || "", 5000);
+  const safeUrl = normalizeHttpUrl(item.url);
   const [aiSummary, setAiSummary] = useState(item.ai_summary || "");
-  const [tags, setTags] = useState<string[]>(item.tags || []);
-  const [precedents, setPrecedents] = useState<string[]>(item.precedents || []);
+  const [tags, setTags] = useState<string[]>(Array.isArray(item.tags) ? item.tags.map((tag: unknown) => sanitizeText(tag, 120)).filter(Boolean) : []);
+  const [precedents, setPrecedents] = useState<string[]>(Array.isArray(item.precedents) ? item.precedents.map((p: unknown) => sanitizeText(p, 300)).filter(Boolean) : []);
   const [loading, setLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -51,7 +60,7 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
     } else {
-      const text = `Title: ${item.title}. Content: ${aiSummary ? aiSummary.replace(/[*#]/g, '') : item.summary}`;
+      const text = `Title: ${safeTitle}. Content: ${aiSummary ? aiSummary.replace(/[*#]/g, '') : safeSummary}`;
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
@@ -78,27 +87,47 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
 
   const generateSummary = async () => {
     if (loading || aiSummary) return;
+    setSummaryError(null);
     setLoading(true);
     try {
+      const user = auth.currentUser;
+      if (!user) {
+        setSummaryError("Sign in to generate an AI case brief.");
+        return;
+      }
+
+      const token = await user.getIdToken();
       const res = await fetch("/api/summarize", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
           id: item.id,
           title: item.title || "Untitled Event",
           description: item.summary || item.content || "No summary available for this event.",
         }),
       });
+      if (!res.ok) {
+        throw new Error(`Summary request failed: ${res.status}`);
+      }
       const data = await res.json();
       setAiSummary(data.summary || "");
       setTags(data.tags || []);
       setPrecedents(data.precedents || []);
       setShowModal(true); // Open modal automatically
       logReadingActivity(); // Record streak action
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("AI summary error:", err);
+      setSummaryError(
+        err instanceof Error
+          ? err.message
+          : "Failed to generate the AI case brief. Please try again.",
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -144,7 +173,7 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
             </span>
           )}
           <h2 className={`${isFeatured ? "text-2xl sm:text-4xl" : "text-base sm:text-xl"} font-bold leading-tight text-slate-900 group-hover:text-indigo-600 transition-colors duration-300`}>
-            {item.title || "Untitled Legal Event"}
+            {safeTitle}
           </h2>
         </div>
 
@@ -168,7 +197,7 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
       {/* Main Content */}
       <div className="relative z-10 space-y-3">
         <p className={`leading-relaxed text-slate-600 ${isFeatured ? "text-base sm:text-lg max-w-3xl" : "text-[13px] sm:text-sm line-clamp-2 group-hover:line-clamp-none"} transition-all duration-500`}>
-          {item.summary || "No full summary provided for this event. Click below to analyze."}
+          {safeSummary || "No full summary provided for this event. Click below to analyze."}
         </p>
 
         {/* Actions Row */}
@@ -202,16 +231,28 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
             )}
           </div>
 
-          <a
-            href={item.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => { e.stopPropagation(); logReadingActivity(); }}
-            className="group/link flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-slate-400 hover:text-indigo-600 transition-all duration-300"
-          >
-            Read Full Document
-            <ExternalLink size={12} className="transition-transform duration-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
-          </a>
+          {summaryError && (
+            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">
+              {summaryError}
+            </div>
+          )}
+
+          {safeUrl ? (
+            <a
+              href={safeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => { e.stopPropagation(); logReadingActivity(); }}
+              className="group/link flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-slate-400 hover:text-indigo-600 transition-all duration-300"
+            >
+              Read Full Document
+              <ExternalLink size={12} className="transition-transform duration-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
+            </a>
+          ) : (
+            <span className="text-[10px] sm:text-[11px] font-bold text-slate-300">
+              Source unavailable
+            </span>
+          )}
         </div>
 
         {/* Modal Portal */}
@@ -263,7 +304,7 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
                 {/* News Context */}
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100 mb-8">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Source Document</p>
-                  <h4 className="text-lg font-bold text-slate-900 leading-snug">{item.title}</h4>
+                  <h4 className="text-lg font-bold text-slate-900 leading-snug">{safeTitle}</h4>
                 </div>
 
                 <div className="prose prose-slate prose-indigo max-w-none">

@@ -1,5 +1,18 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import type { GetNewsResponse } from "@/lib/api-types";
+
+type NewsArticleRow = {
+  id: string;
+  title: string;
+  summary: string | null;
+  content: string | null;
+  url: string;
+  published_at: string;
+  category: string | null;
+  region: string | null;
+  source: string | null;
+};
 
 // Categories that should only show National (Indian) news
 const NATIONAL_ONLY_CATEGORIES = [
@@ -41,13 +54,9 @@ export async function GET(request: Request) {
     const lastUpdated = settingsData?.last_updated || null;
 
     if (statsOnly) {
-      const { count } = await supabase
+      const { data: sourcesData, count } = await supabase
         .from("legal_news")
-        .select("*", { count: "exact", head: true });
-
-      const { data: sourcesData } = await supabase
-        .from("legal_news")
-        .select("source");
+        .select("source", { count: "exact" });
 
       const uniqueSources = new Set(
         (sourcesData || [])
@@ -108,7 +117,7 @@ export async function GET(request: Request) {
       const intlArticles = [...(intlResult.data || []), ...(oldIntlResult.data || [])];
 
       // Interleave results: N, I, N, I, ...
-      const interleaved: any[] = [];
+      const interleaved: NewsArticleRow[] = [];
       const maxLen = Math.max(nationalArticles.length, intlArticles.length);
       for (let i = 0; i < maxLen; i++) {
         if (nationalArticles[i]) interleaved.push(nationalArticles[i]);
@@ -193,20 +202,23 @@ export async function GET(request: Request) {
 
     if (error) throw error;
 
-    return NextResponse.json({
+    const payload: GetNewsResponse<NewsArticleRow> = {
       success: true,
-      articles: data || [],
+      articles: (data || []) as NewsArticleRow[],
       total: count || 0,
       page,
       limit,
       hasMore: count ? to + 1 < count : false,
       lastUpdated,
-    });
-  } catch (error: any) {
+    };
+
+    return NextResponse.json(payload);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Something went wrong";
     console.error("GET /api/get-news error:", error);
 
     return NextResponse.json(
-      { success: false, error: error.message || "Something went wrong" },
+      { success: false, error: message },
       { status: 500 },
     );
   }

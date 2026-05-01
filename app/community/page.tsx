@@ -2,15 +2,45 @@
 
 import { useEffect, useState, useRef } from "react";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import { Send, UploadCloud, Users, CheckCircle2, ShieldAlert, Image as ImageIcon, Heart, MessageCircle, Trash2, Edit2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 
+type CommunityLike = {
+  user_id: string;
+};
+
+type CommunityComment = {
+  id: string;
+  author_avatar: string;
+  author_name: string;
+  created_at: string;
+  content: string;
+};
+
+type CommunityPost = {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string;
+  media_url?: string | null;
+  created_at: string;
+  likes?: CommunityLike[];
+  comments?: CommunityComment[];
+};
+
+type ParsedCommunityContent = {
+  text: string;
+  authorName: string;
+  authorRole: string;
+  authorAvatar: string;
+};
+
 export default function CommunityPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<CommunityPost[]>([]);
   const [activeTab, setActiveTab] = useState<"feed" | "publish">("feed");
 
   // Form states
@@ -32,7 +62,7 @@ export default function CommunityPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser: User | null) => {
       setUser(currentUser);
     });
     fetchPosts();
@@ -48,7 +78,7 @@ export default function CommunityPage() {
       const res = await fetch("/api/community");
       const data = await res.json();
       if (!data.error) {
-        setPosts(data.posts || []);
+        setPosts((data.posts || []) as CommunityPost[]);
       }
     } catch (err) {
       console.error("Failed to load community posts");
@@ -119,13 +149,13 @@ export default function CommunityPage() {
         setMessage("");
       }, 500);
 
-    } catch (err: any) {
-      setError(err.message || "Failed to publish insight.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to publish insight.");
     }
     setIsPublishing(false);
   };
 
-  const handleEditClick = (post: any) => {
+  const handleEditClick = (post: CommunityPost) => {
     setEditingPostId(post.id);
     setTitle(post.title);
     const parsed = parseContent(post);
@@ -168,15 +198,15 @@ export default function CommunityPage() {
     );
   };
 
-  const parseContent = (post: any) => {
+  const parseContent = (post: CommunityPost): ParsedCommunityContent => {
     try {
-      return JSON.parse(post.content);
+      return JSON.parse(post.content) as ParsedCommunityContent;
     } catch {
       return { text: post.content, authorName: "Unknown", authorRole: "Unknown", authorAvatar: "?" };
     }
   };
 
-  const getReputationBadge = (userId: string, allPosts: any[]) => {
+  const getReputationBadge = (userId: string, allPosts: CommunityPost[]) => {
     const totalLikes = allPosts
       .filter(p => p.user_id === userId)
       .reduce((sum, p) => sum + (p.likes?.length || 0), 0);
@@ -196,10 +226,11 @@ export default function CommunityPage() {
     // Optimistic UI update
     setPosts(prev => prev.map(p => {
       if (p.id === postId) {
-        const hasLiked = p.likes?.some((l: any) => l.user_id === user.uid);
+        const hasLiked = p.likes?.some((l) => l.user_id === user.uid);
+        const currentLikes = p.likes || [];
         const newLikes = hasLiked
-          ? p.likes.filter((l: any) => l.user_id !== user.uid)
-          : [...(p.likes || []), { user_id: user.uid }];
+          ? currentLikes.filter((l) => l.user_id !== user.uid)
+          : [...currentLikes, { user_id: user.uid }];
         return { ...p, likes: newLikes };
       }
       return p;
@@ -382,9 +413,9 @@ export default function CommunityPage() {
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => handleToggleLike(post.id)}
-                          className={`flex items-center gap-2 group px-3 py-1.5 rounded-lg transition-colors ${post.likes?.some((l: any) => l.user_id === user?.uid) ? 'bg-pink-500/10 text-pink-500 hover:bg-pink-500/20' : 'bg-gray-50 text-gray-400 hover:bg-pink-500/10 hover:text-pink-400'}`}
+                          className={`flex items-center gap-2 group px-3 py-1.5 rounded-lg transition-colors ${post.likes?.some((l) => l.user_id === user?.uid) ? 'bg-pink-500/10 text-pink-500 hover:bg-pink-500/20' : 'bg-gray-50 text-gray-400 hover:bg-pink-500/10 hover:text-pink-400'}`}
                         >
-                          <Heart size={18} className={`transition-transform group-hover:scale-110 ${post.likes?.some((l: any) => l.user_id === user?.uid) ? 'fill-current' : ''}`} />
+                          <Heart size={18} className={`transition-transform group-hover:scale-110 ${post.likes?.some((l) => l.user_id === user?.uid) ? 'fill-current' : ''}`} />
                           <span className="text-sm font-medium">{post.likes?.length || 0}</span>
                         </button>
 
@@ -432,7 +463,7 @@ export default function CommunityPage() {
 
                         {/* Existing Comments List */}
                         <div className="space-y-3 mt-4">
-                          {post.comments?.map((comment: any) => (
+                          {post.comments?.map((comment) => (
                             <div key={comment.id} className="flex gap-3 bg-gray-50 p-3 rounded-2xl border border-gray-200 shadow-sm">
                               <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-600 font-bold text-xs flex-shrink-0">
                                 {comment.author_avatar}

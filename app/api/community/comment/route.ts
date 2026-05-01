@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, comment: data[0] });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 }

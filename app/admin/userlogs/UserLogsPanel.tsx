@@ -29,6 +29,17 @@ interface UserLogsPanelProps {
   isDarkMode: boolean;
 }
 
+type LogBoxProps = {
+  title: string;
+  icon: React.ElementType;
+  children: React.ReactNode;
+  currentPage: number;
+  totalPages: number;
+  onPrev: () => void;
+  onNext: () => void;
+  colorClass: string;
+};
+
 export default function UserLogsPanel({
   user,
   allUsers,
@@ -69,7 +80,7 @@ export default function UserLogsPanel({
   const currentSidebarUsers = sortedUsers.slice((sidebarPage - 1) * sidebarLimit, sidebarPage * sidebarLimit);
 
   // Common Container Component for uniformity
-  const LogBox = ({ title, icon: Icon, children, currentPage, totalPages, onPrev, onNext, colorClass }: any) => (
+  const LogBox = ({ title, icon: Icon, children, currentPage, totalPages, onPrev, onNext, colorClass }: LogBoxProps) => (
     <div className={`flex flex-col border rounded-3xl overflow-hidden shadow-sm transition-all h-[520px] ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
       <div className={`p-5 border-b flex items-center justify-between ${isDarkMode ? "bg-slate-800/50 border-slate-800" : "bg-slate-50/50 border-slate-100"}`}>
         <div className="flex items-center gap-3">
@@ -172,7 +183,7 @@ export default function UserLogsPanel({
               <p className="text-[10px] font-black uppercase tracking-widest">No Events</p>
             </div>
           ) : (
-            currentHistoryItems.map((log: any, i: number) => (
+            currentHistoryItems.map((log, i) => (
               <div key={i} className={`p-4 rounded-2xl border transition-all ${isDarkMode ? "bg-slate-800/50 border-slate-700" : "bg-slate-50/50 border-slate-100"}`}>
                 <div className="flex items-center justify-between gap-3">
                   <p className={`text-[10px] font-black uppercase tracking-wider ${isDarkMode ? "text-white" : "text-slate-800"}`}>{log.title}</p>
@@ -200,7 +211,7 @@ export default function UserLogsPanel({
               <p className="text-[10px] font-black uppercase tracking-widest">No IP Data</p>
             </div>
           ) : (
-            currentIpItems.map((row: any, i: number) => (
+            currentIpItems.map((row, i) => (
               <div key={i} className={`p-4 rounded-2xl border ${isDarkMode ? "bg-slate-800/50 border-slate-700" : "bg-white border-slate-100 shadow-sm"}`}>
                 <div className="flex items-center justify-between gap-3">
                   <p className={`font-mono text-[10px] font-black ${isDarkMode ? "text-slate-200" : "text-slate-900"}`}>{row.ipAddress}</p>

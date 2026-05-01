@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { X, Search, Check, ChevronRight, Globe, Shield, Landmark, Scale, BookOpen, Building2, Activity, Trophy, Search as SearchIcon, Gavel, Users } from "lucide-react";
+import type { NewsPreferences } from "../news/types";
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
-  onComplete: (preferences: any) => void;
+  onComplete: (preferences: PersonalizationPreferences) => void;
+}
+
+export interface PersonalizationPreferences extends NewsPreferences {
+  role?: string;
+  last_notified_at?: string;
 }
 
 const categories = [
@@ -83,7 +89,7 @@ export default function PersonalizationModal({ isOpen, onClose, userId, onComple
       } else {
         setError(data.error || "Failed to save. Please ensure the 'user_preferences' table exists in Supabase.");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Failed to save preferences", err);
       setError("Network error or server-side failure.");
     }

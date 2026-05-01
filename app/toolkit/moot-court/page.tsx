@@ -89,10 +89,22 @@ export default function MootCourtPage() {
 
   const briefSourceLabel = briefText.trim() || (briefFile ? `Uploaded brief file: ${briefFile.name}` : "No brief selected yet.");
 
+  const getAuthHeaders = async () => {
+    if (!user) {
+      throw new Error("Authentication is required for court session requests.");
+    }
+
+    const token = await user.getIdToken();
+    return {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) fetchRecentSessions(currentUser.uid);
+      if (currentUser) fetchRecentSessions(currentUser);
     });
 
     return () => unsubscribe();
@@ -126,8 +138,14 @@ export default function MootCourtPage() {
     };
   }, []);
 
-  const fetchRecentSessions = async (userId: string) => {
-    const res = await fetch(`/api/moot-court/sessions?userId=${userId}&limit=5`);
+  const fetchRecentSessions = async (currentUser: FirebaseUser) => {
+    const token = await currentUser.getIdToken();
+    const res = await fetch(`/api/moot-court/sessions?limit=5`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
     const data = await res.json();
 
     if (!data.error) setRecentSessions(data.sessions || []);
@@ -140,7 +158,10 @@ export default function MootCourtPage() {
     setCaseType(session.case_type as CaseType);
 
     try {
-      const res = await fetch(`/api/moot-court/messages?sessionId=${session.id}`);
+      const headers = await getAuthHeaders();
+      const res = await fetch(`/api/moot-court/messages?sessionId=${session.id}`, {
+        headers,
+      });
       const data = await res.json();
       if (!data.error) {
         setMessages(data.messages || []);
@@ -160,7 +181,11 @@ export default function MootCourtPage() {
 
   const deleteSession = async (sessionId: string) => {
     try {
-      await fetch(`/api/moot-court/sessions?sessionId=${sessionId}`, { method: "DELETE" });
+      const headers = await getAuthHeaders();
+      await fetch(`/api/moot-court/sessions?sessionId=${sessionId}`, {
+        method: "DELETE",
+        headers,
+      });
       setRecentSessions((prev) => prev.filter((s) => s.id !== sessionId));
     } catch (err) {
       console.error("Delete session failed:", err);
@@ -275,9 +300,10 @@ export default function MootCourtPage() {
         setEvaluation(parsed);
 
         if (sessionId) {
+          const headers = await getAuthHeaders();
           await fetch("/api/moot-court/sessions", {
             method: "PATCH",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({ sessionId, evaluation: parsed }),
           });
         }
@@ -311,9 +337,8 @@ export default function MootCourtPage() {
       try {
         const createRes = await fetch("/api/moot-court/sessions", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: await getAuthHeaders(),
           body: JSON.stringify({
-            userId: user.uid,
             courtType: "High Court",
             caseType,
           }),
@@ -590,7 +615,7 @@ export default function MootCourtPage() {
       };
       setMessages((prev) => [...prev, systemMsg]);
 
-      if (nextPhase === "Verdict Deliberation") {
+        if (nextPhase === "Verdict Deliberation") {
         // Auto-trigger evaluation after a short delay
         setTimeout(() => getEvaluation(), 2000);
       }
@@ -632,9 +657,10 @@ export default function MootCourtPage() {
         // or just the briefText area for demonstration.
         // Let's call the summarizer if briefText is populated.
         if (briefText.length > 500) {
+          const headers = await getAuthHeaders();
           const res = await fetch("/api/moot-court/summarize", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers,
             body: JSON.stringify({ text: briefText }),
           });
           const data = await res.json();

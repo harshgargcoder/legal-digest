@@ -6,6 +6,7 @@ import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { BookOpen, Scale, Flame, Activity, Bookmark as BookmarkIcon, History, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import NewsCard from "../components/news/NewsCard";
+import type { NewsArticle } from "@/app/components/news/types";
 import type { EvaluationResult } from "@/app/toolkit/moot-court/types";
 
 interface BookmarkRecord {
@@ -17,6 +18,17 @@ interface MootSessionRecord {
   case_type: string;
   created_at: string;
   evaluation: EvaluationResult | null;
+}
+
+function isNewsArticle(value: unknown): value is NewsArticle {
+  return Boolean(
+    value &&
+    typeof value === "object" &&
+    "id" in value &&
+    "title" in value &&
+    "url" in value &&
+    "published_at" in value,
+  );
 }
 
 export default function DashboardPage() {
@@ -86,7 +98,9 @@ export default function DashboardPage() {
     );
   }
 
-  const savedCases = bookmarks.map((b) => b.legal_news).filter((item): item is Record<string, unknown> => Boolean(item));
+  const savedCases = bookmarks
+    .map((b): NewsArticle | null => (isNewsArticle(b.legal_news) ? b.legal_news : null))
+    .filter((item): item is NewsArticle => item !== null);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pt-32 pb-8 px-4 sm:px-8">
