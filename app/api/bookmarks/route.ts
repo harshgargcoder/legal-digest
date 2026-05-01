@@ -7,6 +7,12 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+type BookmarkRow = {
+  id?: string;
+  note: string | null;
+  legal_news: unknown;
+};
+
 export async function GET(req: NextRequest) {
   try {
     const userId = req.nextUrl.searchParams.get("userId");
@@ -27,10 +33,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ bookmarks: data || [] }, { status: 200 });
-  } catch (error: any) {
+    return NextResponse.json({ bookmarks: (data || []) as BookmarkRow[] }, { status: 200 });
+  } catch (error: unknown) {
     console.error("API Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -83,9 +89,9 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("API Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
   }
 }
 
@@ -112,8 +118,8 @@ export async function PUT(req: NextRequest) {
   
       return NextResponse.json({ isBookmarked: !!existing }, { status: 200 });
   
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("API Error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error instanceof Error ? error.message : "Unknown error" }, { status: 500 });
     }
   }

@@ -2,11 +2,33 @@
 
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 import NewsCard from "../components/news/NewsCard";
 import { Save, Edit3, CheckCircle2 } from "lucide-react";
+import type { NewsArticle } from "../components/news/types";
 
-function BookmarkItem({ post, index }: { post: any, index: number }) {
+type BookmarkedArticle = NewsArticle & {
+  userNote?: string | null;
+};
+
+type BookmarkRecord = {
+  note?: string | null;
+  legal_news?: unknown;
+};
+
+function isNewsArticle(value: unknown): value is NewsArticle {
+  if (!value || typeof value !== "object") return false;
+
+  const article = value as Partial<NewsArticle>;
+  return (
+    typeof article.id === "string" &&
+    typeof article.title === "string" &&
+    typeof article.url === "string" &&
+    typeof article.published_at === "string"
+  );
+}
+
+function BookmarkItem({ post, index }: { post: BookmarkedArticle; index: number }) {
   const [note, setNote] = useState(post.userNote || "");
   const [isEditing, setIsEditing] = useState(!post.userNote);
   const [isSaving, setIsSaving] = useState(false);
@@ -71,7 +93,7 @@ function BookmarkItem({ post, index }: { post: any, index: number }) {
             <div className="flex justify-end gap-3">
               {post.userNote && (
                 <button
-                  onClick={() => { setNote(post.userNote); setIsEditing(false); }}
+                  onClick={() => { setNote(post.userNote ?? ""); setIsEditing(false); }}
                   className="px-4 py-2 text-xs font-medium text-gray-400 hover:text-white transition"
                 >
                   Cancel
@@ -107,11 +129,11 @@ function BookmarkItem({ post, index }: { post: any, index: number }) {
 }
 
 export default function BookmarksPage() {
-  const [posts, setPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<BookmarkedArticle[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user: User | null) => {
       if (!user) {
         setLoading(false);
         return;
@@ -127,18 +149,29 @@ export default function BookmarksPage() {
           return;
         }
 
-        const seenIds = new Set();
+        const seenIds = new Set<string>();
         const newsPosts =
-          data.bookmarks?.map((item: any) => ({
-            ...item.legal_news,
-            userNote: item.note,
-          })).filter((post: any) => {
-            if (post.id && !seenIds.has(post.id)) {
-              seenIds.add(post.id);
-              return true;
-            }
-            return false;
-          }) || [];
+          ((data.bookmarks as BookmarkRecord[] | undefined) ?? [])
+            .map((item) => {
+              if (!item.legal_news) return null;
+              const legalNews = Array.isArray(item.legal_news)
+                ? item.legal_news[0]
+                : item.legal_news;
+
+              if (!isNewsArticle(legalNews)) return null;
+
+              return {
+                ...legalNews,
+                userNote: item.note ?? null,
+              } as BookmarkedArticle;
+            })
+            .filter((post): post is BookmarkedArticle => {
+              if (post?.id && !seenIds.has(post.id)) {
+                seenIds.add(post.id);
+                return true;
+              }
+              return false;
+            });
 
         setPosts(newsPosts);
       } catch (error) {

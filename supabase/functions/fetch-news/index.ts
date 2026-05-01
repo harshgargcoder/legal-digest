@@ -1,7 +1,13 @@
 import { serve } from "https://deno.land/std@0.192.0/http/server.ts";
 import Parser from "npm:rss-parser@3.13.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { detectCategories, detectRegion } from "../_shared/filter.ts";
+import {
+  chunkArray,
+  detectCategories,
+  detectRegion,
+  normalizeHttpUrl,
+  sanitizeText,
+} from "../_shared/filter.ts";
 
 type Category =
   | "Constitutional"
@@ -23,13 +29,54 @@ const parser = new Parser({
   headers: { "User-Agent": "Mozilla/5.0" },
 });
 
-serve(async () => {
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-  );
+function getBearerToken(req: Request) {
+  const header = req.headers.get("authorization");
+  if (!header || !header.startsWith("Bearer ")) return null;
+  return header.slice("Bearer ".length).trim();
+}
 
-  const allFeeds: FeedConfig[] = [
+function requireScraperSecret(req: Request) {
+  const configuredSecret = Deno.env.get("SCRAPER_ACCESS_TOKEN")?.trim();
+  const provided =
+    getBearerToken(req) ?? req.headers.get("x-scraper-token")?.trim() ?? "";
+
+  if (!configuredSecret) {
+    const host = req.headers.get("host")?.toLowerCase() ?? "";
+    const isLocal = host.includes("localhost") || host.includes("127.0.0.1");
+
+    if (isLocal) return;
+
+    throw new Error("SCRAPER_ACCESS_TOKEN is not configured");
+  }
+
+  if (provided !== configuredSecret) {
+    throw new Error("Unauthorized scraper request");
+  }
+}
+
+serve(async (req) => {
+  try {
+    if (req.method !== "POST") {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Method Not Allowed. Use POST with the scraper token.",
+        }),
+        {
+          status: 405,
+          headers: { "Content-Type": "application/json", Allow: "POST" },
+        },
+      );
+    }
+
+    requireScraperSecret(req);
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    const allFeeds: FeedConfig[] = [
     {
       url:
         "https://news.google.com/rss/search?q=Supreme+Court+India&hl=en-IN&gl=IN&ceid=IN:en",
@@ -141,32 +188,43 @@ serve(async () => {
     { url: "https://www.aljazeera.com/xml/rss/all.xml", category: "Global" },
   ];
 
-  let totalInserted = 0;
+    let totalInserted = 0;
 
-  for (const feed of allFeeds) {
-    try {
-      const cacheBusterUrl = feed.url + (feed.url.includes("?") ? "&" : "?") +
-        `t=${Date.now()}`;
-      const response = await fetch(cacheBusterUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-          "Cache-Control": "no-cache",
-          "Pragma": "no-cache",
-        },
-      });
+    for (const feed of allFeeds) {
+      try {
+        const cacheBusterUrl = feed.url + (feed.url.includes("?") ? "&" : "?") +
+          `t=${Date.now()}`;
+        const response = await fetch(cacheBusterUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
+          },
+        });
 
-      if (!response.ok) continue;
+        if (!response.ok) continue;
 
-      const xml = await response.text();
-      const parsed = await parser.parseString(xml);
-      if (!parsed.items?.length) continue;
+        const xml = await response.text();
+        const parsed = await parser.parseString(xml);
+        if (!parsed.items?.length) continue;
 
-      const articles: any[] = [];
+        type IngestedArticle = {
+          title: string;
+          summary: string;
+          content: string;
+          url: string;
+          image_url: string | null;
+          source: string;
+          category: Category;
+          region: "India" | "Global";
+          published_at: string;
+        };
+        const articles: IngestedArticle[] = [];
 
-      for (const item of parsed.items) {
-        if (!item.title || !item.link) continue;
-
-        const cleanUrl = item.link.split("?")[0];
+        for (const item of parsed.items) {
+          const cleanUrl = normalizeHttpUrl(item.link);
+          const title = sanitizeText(item.title, 300);
+          if (!title || !cleanUrl) continue;
 
         let source = "";
         try {
@@ -194,14 +252,16 @@ serve(async () => {
         );
 
         articles.push({
-          title: item.title.trim(),
-          summary: item.contentSnippet?.trim() || "",
-          content: item.content ?? "",
+          title,
+          summary: sanitizeText(item.contentSnippet || "", 5000),
+          content: sanitizeText(item.content ?? "", 5000),
           url: cleanUrl,
-          image_url: item.enclosure?.url ||
-            item["media:content"]?.$?.url ||
-            item["media:thumbnail"]?.$?.url ||
-            null,
+          image_url: normalizeHttpUrl(
+            item.enclosure?.url ||
+              item["media:content"]?.$?.url ||
+              item["media:thumbnail"]?.$?.url ||
+              null,
+          ),
           source,
           category: feed.category ?? categories[0] ?? "General",
           region,
@@ -211,21 +271,23 @@ serve(async () => {
         });
       }
 
-      if (articles.length > 0) {
-        const { error } = await supabase
-          .from("legal_news")
-          .upsert(articles, { onConflict: "url" });
+        if (articles.length > 0) {
+          for (const chunk of chunkArray(articles, 25)) {
+            const { error } = await supabase
+              .from("legal_news")
+              .upsert(chunk, { onConflict: "url" });
 
-        if (!error) {
-          totalInserted += articles.length;
+            if (!error) {
+              totalInserted += chunk.length;
+            }
+          }
         }
+      } catch (err) {
+        console.error("Feed error:", feed.url, err);
       }
-    } catch (err) {
-      console.error("Feed error:", feed.url, err);
     }
-  }
-  // const sevenDaysAgo = new Date();
-  // sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // const sevenDaysAgo = new Date();
+    // sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
   // await supabase
   //   .from("legal_news")
@@ -237,8 +299,20 @@ serve(async () => {
   //   .update({ last_updated: new Date().toISOString() })
   //   .eq("id", 1);
 
-  return new Response(
-    JSON.stringify({ success: true, totalInserted }),
-    { headers: { "Content-Type": "application/json" } },
-  );
+    return new Response(
+      JSON.stringify({ success: true, totalInserted }),
+      { headers: { "Content-Type": "application/json" } },
+    );
+  } catch (err) {
+    console.error("fetch-news fatal error:", err);
+    const message = err instanceof Error ? err.message : "Internal server error";
+    const status = message.includes("Unauthorized") ? 401 : 500;
+    return new Response(
+      JSON.stringify({ success: false, error: message }),
+      {
+        status,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  }
 });

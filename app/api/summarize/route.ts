@@ -1,6 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createClient } from "@supabase/supabase-js";
+import {
+    enforceRateLimit,
+    getRouteErrorResponse,
+    requireFirebaseUser,
+} from "@/lib/route-security";
+import { sanitizeText } from "@/supabase/functions/_shared/filter";
+import type {
+    NewsSummaryRequest,
+    NewsSummaryResponse,
+    TrendingTopicsResponse,
+} from "@/lib/api-types";
 
 const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,7 +46,7 @@ export async function GET() {
 
         const wordCount: Record<string, number> = {};
 
-        articles.forEach((article: any) => {
+        articles.forEach((article: { title?: string | null; description?: string | null }) => {
             const text = `${article.title ?? ""} ${article.description ?? ""}`;
 
             const words = text.split(/\s+/);
@@ -56,10 +67,12 @@ export async function GET() {
             .slice(0, 5)
             .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1));
 
-        return NextResponse.json({
+        const response: TrendingTopicsResponse = {
             articlesAnalyzed: articles.length,
             trendingTopics,
-        });
+        };
+
+        return NextResponse.json(response);
     } catch (err) {
         console.error("Trending API error:", err);
 
@@ -72,15 +85,27 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
-        const { id, title, description } = await req.json();
+        const auth = await requireFirebaseUser(req);
+        enforceRateLimit(`summarize:${auth.uid}`, {
+            limit: 20,
+            windowMs: 60_000,
+        });
+
+        const { id, title, description } = (await req.json()) as NewsSummaryRequest & {
+            id?: string;
+        };
 
         if (!process.env.GEMINI_API_KEY) {
             throw new Error("Missing GEMINI_API_KEY");
         }
 
         // Ensure we don't send purely empty/null strings to the AI, or it talks about missing content.
-        const safeTitle = title || "Untitled";
-        const safeDesc = description || "No detailed description provided. Assume this is a breaking news headline or live event.";
+        const safeTitle = sanitizeText(title, 300) || "Untitled";
+        const safeDesc = sanitizeText(
+            description ||
+                "No detailed description provided. Assume this is a breaking news headline or live event.",
+            5000,
+        );
 
         const prompt = `
 You are a legal news analyst. Analyze the following legal news article and extract structured information.
@@ -158,9 +183,10 @@ Do not add any commentary, markdown formatting, or extra explanation. Return onl
                 const result = await model.generateContent(prompt);
                 text = result.response.text();
                 if (text) break;
-            } catch (err: any) {
-                console.warn(`Summarize Model ${modelName} failed:`, err.message);
-                lastError = err.message;
+            } catch (err: unknown) {
+                const message = err instanceof Error ? err.message : "Unknown error";
+                console.warn(`Summarize Model ${modelName} failed:`, message);
+                lastError = message;
             }
         }
 
@@ -230,14 +256,18 @@ Do not add any commentary, markdown formatting, or extra explanation. Return onl
                 .eq("id", id);
         }
 
-        return NextResponse.json({
+        const response: NewsSummaryResponse = {
             summary,
             tags,
             precedents,
             outcomes,
-        });
-    } catch (error: any) {
-        if (error.message?.includes("429")) {
+        };
+
+        return NextResponse.json(response);
+    } catch (error: unknown) {
+        const { message, status } = getRouteErrorResponse(error);
+
+        if (error instanceof Error && error.message?.includes("429")) {
             console.log("Rate limit hit. Returning fallback summary.");
 
             return NextResponse.json({
@@ -249,8 +279,8 @@ Do not add any commentary, markdown formatting, or extra explanation. Return onl
         console.error(error);
 
         return NextResponse.json(
-            { error: error.message || "Summary generation failed" },
-            { status: 500 },
+            { error: message || "Summary generation failed" },
+            { status },
         );
     }
 }

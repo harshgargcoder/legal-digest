@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { sanitizeText } from "@/supabase/functions/_shared/filter";
+import type { TrendingTopicsResponse } from "@/lib/api-types";
 
 export default function AIInsights() {
-
-  const [insights, setInsights] = useState<any>(null);
+  const [insights, setInsights] = useState<TrendingTopicsResponse | null>(null);
 
   useEffect(() => {
     fetch("/api/summarize")
       .then((res) => res.json())
-      .then(setInsights);
+      .then((data: TrendingTopicsResponse) => setInsights(data));
   }, []);
 
   if (!insights) return null;
@@ -26,12 +27,12 @@ export default function AIInsights() {
       </p>
 
       <div className="flex flex-wrap gap-2">
-        {insights.trendingTopics?.map((t: any, i: number) => (
+        {insights.trendingTopics.map((t, i: number) => (
           <span
             key={i}
             className="text-xs px-2 py-1 rounded-full bg-indigo-100 text-indigo-700"
           >
-            {Array.isArray(t) ? t[0] : t}
+            {sanitizeText(t, 60)}
           </span>
         ))}
       </div>

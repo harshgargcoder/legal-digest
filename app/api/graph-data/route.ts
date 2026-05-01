@@ -5,6 +5,18 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
+type GraphNode = {
+  id: string;
+  name: string;
+  group: number;
+  val: number;
+};
+
+type GraphLink = {
+  source: string;
+  target: string;
+};
+
 export async function GET() {
   try {
     const { data: articles, error } = await supabase
@@ -14,8 +26,8 @@ export async function GET() {
 
     if (error) throw error;
 
-    const nodes: any[] = [];
-    const links: any[] = [];
+    const nodes: GraphNode[] = [];
+    const links: GraphLink[] = [];
 
     const existingNodes = new Set();
     const precedentNodes = new Set();
@@ -57,7 +69,7 @@ export async function GET() {
     });
 
     return NextResponse.json({ nodes, links });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    return NextResponse.json({ error: err instanceof Error ? err.message : "Unknown error" }, { status: 500 });
   }
 }

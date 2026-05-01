@@ -35,7 +35,7 @@ export default function BriefingProPage() {
     reader.onloadend = () => {
       const base64 = (reader.result as string).split(",")[1];
       setFile({ data: base64, mimeType: selectedFile.type });
-      
+
       if (selectedFile.type.startsWith("image/")) {
         setFilePreview(URL.createObjectURL(selectedFile));
       } else {
@@ -130,7 +130,7 @@ export default function BriefingProPage() {
       const doc = new Document({
         sections: [{
           properties: {},
-          children: textToSave.split('\n').map(line => 
+          children: textToSave.split('\n').map(line =>
             new Paragraph({
               children: [new TextRun({ text: line, size: 24 })],
             })
@@ -152,7 +152,7 @@ export default function BriefingProPage() {
   return (
     <div className="min-h-screen bg-slate-50 pt-32 pb-24 px-4 sm:px-6">
       <div className="max-w-6xl mx-auto">
-        
+
         {/* Header */}
         <div className="flex items-center gap-4 mb-10">
           <Link href="/toolkit" className="p-2 bg-white border border-slate-200 rounded-xl text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition shadow-sm">
@@ -169,10 +169,10 @@ export default function BriefingProPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-          
+
           {/* Input Side */}
           <div className="space-y-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               className="bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-xl shadow-slate-200/50"
@@ -183,7 +183,7 @@ export default function BriefingProPage() {
                 </h3>
                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Upload PDF/Image or Paste Facts</span>
               </div>
-              
+
               <div className="relative group">
                 <textarea
                   value={content}
@@ -192,7 +192,7 @@ export default function BriefingProPage() {
                   placeholder="Paste the case facts, legal document snippet, or upload a file. Gemini 3 Flash will analyze and brief it for you..."
                   className="w-full h-[400px] bg-slate-50 border border-slate-100 rounded-3xl p-6 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all text-slate-900 font-medium placeholder:text-slate-400 resize-none shadow-inner"
                 />
-                
+
                 <button
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute bottom-4 right-4 p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-blue-600 hover:border-blue-200 shadow-sm transition-all active:scale-95 group-hover:shadow-md"
@@ -251,13 +251,13 @@ export default function BriefingProPage() {
                 </p>
               </div>
             </div>
-            
+
 
           </div>
 
           {/* Result Side */}
           <div className="space-y-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className={`bg-white border border-slate-200 rounded-[2.5rem] p-8 shadow-2xl h-[640px] flex flex-col transition-all duration-500 ${!result && !loading ? 'opacity-50 grayscale' : 'opacity-100 grayscale-0'}`}
@@ -268,7 +268,7 @@ export default function BriefingProPage() {
                 </h3>
                 {result && (
                   <div className="flex items-center gap-2 relative">
-                    <button 
+                    <button
                       onClick={() => {
                         navigator.clipboard.writeText(result.brief);
                       }}
@@ -276,9 +276,9 @@ export default function BriefingProPage() {
                     >
                       <Clipboard size={14} /> Copy
                     </button>
-                    
+
                     <div className="relative">
-                      <button 
+                      <button
                         onClick={() => setDownloadMenuOpen(!downloadMenuOpen)}
                         className="flex items-center gap-2 px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl transition shadow-lg shadow-blue-600/20"
                       >
@@ -287,19 +287,19 @@ export default function BriefingProPage() {
 
                       {downloadMenuOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-100 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                          <button 
+                          <button
                             onClick={() => downloadBrief('docx')}
                             className="w-full px-4 py-3 text-left text-[10px] font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 flex items-center gap-3 transition-colors border-b border-slate-50"
                           >
                             <FileText size={14} className="text-blue-400" /> MS Word (.docx)
                           </button>
-                          <button 
+                          <button
                             onClick={() => downloadBrief('pdf')}
                             className="w-full px-4 py-3 text-left text-[10px] font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 flex items-center gap-3 transition-colors border-b border-slate-50"
                           >
                             <FilePlus size={14} className="text-red-400" /> PDF Document (.pdf)
                           </button>
-                          <button 
+                          <button
                             onClick={() => downloadBrief('txt')}
                             className="w-full px-4 py-3 text-left text-[10px] font-bold text-slate-600 hover:text-blue-600 hover:bg-blue-50 flex items-center gap-3 transition-colors"
                           >
@@ -335,23 +335,23 @@ export default function BriefingProPage() {
                     <div className="prose prose-slate prose-blue max-w-none mb-8">
                       <ReactMarkdown
                         components={{
-                          h1: ({node, ...props}) => <h1 className="text-xl font-black text-slate-900 mb-4 border-b border-slate-100 pb-2" {...props} />,
-                          h2: ({node, ...props}) => <h2 className="text-lg font-bold text-blue-600 mt-6 mb-3" {...props} />,
-                          p: ({node, ...props}) => <p className="text-slate-600 leading-relaxed mb-4 text-sm" {...props} />,
-                          ul: ({node, ...props}) => <ul className="space-y-3 mb-6 list-none pl-0" {...props} />,
+                          h1: ({ node, ...props }) => <h1 className="text-xl font-black text-slate-900 mb-4 border-b border-slate-100 pb-2" {...props} />,
+                          h2: ({ node, ...props }) => <h2 className="text-lg font-bold text-blue-600 mt-6 mb-3" {...props} />,
+                          p: ({ node, ...props }) => <p className="text-slate-600 leading-relaxed mb-4 text-sm" {...props} />,
+                          ul: ({ node, ...props }) => <ul className="space-y-3 mb-6 list-none pl-0" {...props} />,
                           li: ({ children }) => (
                             <li className="flex gap-3 items-start">
                               <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 flex-shrink-0"></span>
                               <span className="text-slate-600 text-sm">{children}</span>
                             </li>
                           ),
-                          strong: ({node, ...props}) => <strong className="text-slate-900 font-bold" {...props} />,
+                          strong: ({ node, ...props }) => <strong className="text-slate-900 font-bold" {...props} />,
                         }}
                       >
                         {result.brief}
                       </ReactMarkdown>
                     </div>
-                    
+
                     <div className="bg-blue-50 border border-blue-100 rounded-3xl p-6">
                       <h4 className="text-xs font-black uppercase tracking-widest text-blue-600 mb-2 flex items-center gap-2">
                         <Scale size={14} /> Advocate's Takeaway

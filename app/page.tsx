@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import { useSearch } from "@/app/context/SearchContext";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User } from "firebase/auth";
 
 import CategoryFilter from "./components/categories/CategoryFilter";
 import NewsFeed from "./components/news/NewsFeed";
@@ -12,6 +12,7 @@ import NewsletterCTA from "./components/NewsLetterCTA";
 import TrendingSidebar from "./components/TrendingSidebar";
 import PersonalizationModal from "./components/auth/PersonalizationModal";
 import MootCourtLeaderboard from "./components/MootCourtLeaderboard";
+import type { NewsPreferences } from "./components/news/types";
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -21,8 +22,8 @@ function HomeContent() {
   const searchParams = useSearchParams();
 
   const [category, setCategory] = useState(() => searchParams.get("category") || "All");
-  const [user, setUser] = useState<any>(null);
-  const [preferences, setPreferences] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [preferences, setPreferences] = useState<NewsPreferences | null>(null);
   const [isPersonalizing, setIsPersonalizing] = useState(false);
 
   useEffect(() => {
@@ -38,7 +39,7 @@ function HomeContent() {
   }, [searchParams, setSearch]);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser: User | null) => {
       setUser(currentUser);
       if (currentUser) {
         fetchPreferences(currentUser.uid);
@@ -59,7 +60,7 @@ function HomeContent() {
         // New user or no preferences set
         setIsPersonalizing(true);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to fetch preferences", err);
     }
   };

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Hammer, Scale, BookOpen, Quote, Boxes, ChevronRight, X, User, ShieldCheck } from "lucide-react";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged } from "firebase/auth";
+import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -94,13 +94,13 @@ function AIHallucinationModal({ toolName, onConfirm, onClose }: { toolName: stri
 }
 
 export default function ToolkitPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [pendingTool, setPendingTool] = useState<{ id: string, title: string, href: string } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser: FirebaseUser | null) => {
       setUser(currentUser);
     });
     return () => unsubscribe();
@@ -145,7 +145,9 @@ export default function ToolkitPage() {
     }
   ];
 
-  const handleToolClick = (e: React.MouseEvent, tool: any) => {
+  type ToolkitTool = (typeof tools)[number];
+
+  const handleToolClick = (e: React.MouseEvent, tool: ToolkitTool) => {
     e.preventDefault();
     if (!user) {
       setShowLoginModal(true);

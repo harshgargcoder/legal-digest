@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { auth } from "@/lib/firebase";
-import { onAuthStateChanged, updateProfile } from "firebase/auth";
+import { onAuthStateChanged, updateProfile, type User as FirebaseUser } from "firebase/auth";
 import { User, Camera, ShieldCheck, Mail, Briefcase, Landmark, Scale, BookOpen, Building2, Activity, Trophy, Shield, X } from "lucide-react";
+import type { NewsPreferences } from "../components/news/types";
+
+type ProfilePreferences = NewsPreferences & {
+  role?: string;
+  last_notified_at?: string;
+};
 
 export default function ProfilePage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState("Law Student");
   const [loading, setLoading] = useState(true);
@@ -16,7 +22,7 @@ export default function ProfilePage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [stats, setStats] = useState<{ posts: number; likes: number }>({ posts: 0, likes: 0 });
-  const [preferences, setPreferences] = useState<any>({ categories: [], topics: [] });
+  const [preferences, setPreferences] = useState<ProfilePreferences>({ categories: [], topics: [] });
   const [prefMessage, setPrefMessage] = useState("");
 
   const roles = [
@@ -44,11 +50,11 @@ export default function ProfilePage() {
         const res = await fetch("/api/community");
         const data = await res.json();
         if (data.posts) {
-          const userPosts = data.posts.filter((p: any) => p.user_id === uid);
-          const totalLikes = userPosts.reduce((sum: number, p: any) => sum + (p.likes?.length || 0), 0);
+          const userPosts = data.posts.filter((p: { user_id?: string; likes?: unknown[] }) => p.user_id === uid);
+          const totalLikes = userPosts.reduce((sum: number, p: { likes?: unknown[] }) => sum + (p.likes?.length || 0), 0);
           setStats({ posts: userPosts.length, likes: totalLikes });
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Failed to load user stats");
       }
     };
@@ -60,12 +66,12 @@ export default function ProfilePage() {
         if (data.preferences) {
           setPreferences(data.preferences);
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Failed to fetch preferences", err);
       }
     };
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser: FirebaseUser | null) => {
       setUser(currentUser);
       if (currentUser) {
         setDisplayName(currentUser.displayName || "");
@@ -86,7 +92,7 @@ export default function ProfilePage() {
         setPreferences(data.preferences);
         if (data.preferences.role) setRole(data.preferences.role);
       }
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Failed to fetch preferences", err);
     }
   };
@@ -97,7 +103,7 @@ export default function ProfilePage() {
     return { label: "Novice", color: "text-blue-400 bg-blue-400/10 border-blue-500/30", icon: "🌱" };
   };
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
+  const handleUpdateProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!user) return;
 
@@ -145,7 +151,7 @@ export default function ProfilePage() {
       setMessage("Profile specialized successfully.");
       setIsEditing(false);
       setFile(null);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Error updating profile", error);
       setMessage("Failed to transmit identity updates.");
     }
@@ -168,7 +174,7 @@ export default function ProfilePage() {
       });
       if (res.ok) setPrefMessage("Preferences saved!");
       else setPrefMessage("Failed to save.");
-    } catch (err) {
+    } catch (err: unknown) {
       setPrefMessage("Error saving preferences.");
     }
     setSaving(false);

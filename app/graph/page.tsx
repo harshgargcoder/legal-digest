@@ -4,13 +4,44 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { Network, Search, AlertCircle, RefreshCw } from "lucide-react";
 
+type GraphNode = {
+  id: string;
+  name: string;
+  group: number;
+  val: number;
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number;
+  fy?: number;
+  __bckgDimensions?: number[];
+  [key: string]: unknown;
+};
+
+type GraphLink = {
+  source: string;
+  target: string;
+};
+
+type ForceGraphNode = {
+  id?: string | number;
+  x?: number;
+  y?: number;
+  vx?: number;
+  vy?: number;
+  fx?: number;
+  fy?: number;
+  [key: string]: unknown;
+};
+
 // Dynamically import react-force-graph-2d because it accesses the window object and Canvas API, which breaks SSR.
 const ForceGraph2D = dynamic(() => import("react-force-graph-2d"), {
   ssr: false,
 });
 
 export default function GraphPage() {
-  const [graphData, setGraphData] = useState<{ nodes: any[]; links: any[] }>({ nodes: [], links: [] });
+  const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; links: GraphLink[] }>({ nodes: [], links: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 });
@@ -59,7 +90,7 @@ export default function GraphPage() {
       } else {
         setGraphData(data);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
       setError("Failed to load map topology data.");
     }
@@ -131,29 +162,31 @@ export default function GraphPage() {
               linkDirectionalParticleSpeed={0.005}
               linkColor={() => "rgba(0,0,0,0.1)"}
               backgroundColor="rgba(255,255,255,0)"
-              nodeCanvasObject={(node: any, ctx, globalScale) => {
-                const label = node.name;
+              nodeCanvasObject={(node: ForceGraphNode, ctx, globalScale) => {
+                const graphNode = node as GraphNode;
+                const label = graphNode.name || "";
                 const fontSize = 12 / globalScale;
                 ctx.font = `${fontSize}px Sans-Serif`;
                 const textWidth = ctx.measureText(label).width;
                 const bckgDimensions = [textWidth, fontSize].map(n => n + fontSize * 0.2);
 
                 ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
-                ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1]);
+                ctx.fillRect((graphNode.x ?? 0) - bckgDimensions[0] / 2, (graphNode.y ?? 0) - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1]);
 
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.fillStyle = node.group === 1 ? "#4f46e5" : "#ea580c"; // Darker text for white bg
-                ctx.fillText(label, node.x, node.y);
+                ctx.fillStyle = graphNode.group === 1 ? "#4f46e5" : "#ea580c"; // Darker text for white bg
+                ctx.fillText(label, graphNode.x ?? 0, graphNode.y ?? 0);
 
-                node.__bckgDimensions = bckgDimensions; // to re-use in nodePointerAreaPaint
+                graphNode.__bckgDimensions = bckgDimensions; // to re-use in nodePointerAreaPaint
               }}
-              nodePointerAreaPaint={(node: any, color, ctx) => {
+              nodePointerAreaPaint={(node: ForceGraphNode, color, ctx) => {
+                const graphNode = node as GraphNode;
                 ctx.fillStyle = color;
-                const bckgDimensions = node.__bckgDimensions;
-                bckgDimensions && ctx.fillRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1]);
+                const bckgDimensions = graphNode.__bckgDimensions;
+                bckgDimensions && ctx.fillRect((graphNode.x ?? 0) - bckgDimensions[0] / 2, (graphNode.y ?? 0) - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1]);
               }}
-              onNodeClick={(node: any) => {
+              onNodeClick={(node: ForceGraphNode, event: MouseEvent) => {
                 // Center camera on node
               }}
             />

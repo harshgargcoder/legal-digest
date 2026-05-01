@@ -66,16 +66,17 @@ export default function AuthModal({ isOpen, onClose }: Props) {
         });
       }
       onClose();
-    } catch (err: any) {
-      console.error("Auth Error:", err.code);
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+    } catch (err: unknown) {
+      const error = err as { code?: string; message?: string };
+      console.error("Auth Error:", error.code);
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
         setError("Invalid identity. The email or password entered does not match our records.");
-      } else if (err.code === 'auth/email-already-in-use') {
+      } else if (error.code === 'auth/email-already-in-use') {
         setError("This email is already registered. Please sign in instead.");
-      } else if (err.code === 'auth/weak-password') {
+      } else if (error.code === 'auth/weak-password') {
         setError("Security risk: Password should be at least 6 characters.");
       } else {
-        setError(err.message);
+        setError(error.message || "Authentication failed.");
       }
     } finally {
       setLoading(false);
@@ -96,8 +97,8 @@ export default function AuthModal({ isOpen, onClose }: Props) {
       }
       
       onClose();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Google login failed.");
     } finally {
       setLoading(false);
     }

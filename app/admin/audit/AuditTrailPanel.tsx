@@ -3,6 +3,24 @@ import { AdminUser } from "../types";
 import { formatDate } from "../shared/shared";
 import { RefreshCw, Search, ChevronLeft } from "lucide-react";
 
+type IpLogItem = {
+  userId: string;
+  userName: string;
+  ipAddress: string;
+  location: string;
+  seenAt: string;
+  status: string;
+};
+
+type ActivityLogItem = {
+  userId: string;
+  userName: string;
+  title: string;
+  description: string;
+  timestamp: string;
+  status: string;
+};
+
 export function AuditTrailPanel({ 
   users, 
   onRefresh 
@@ -27,7 +45,7 @@ export function AuditTrailPanel({
     setPage(1);
   }, [tab, searchQuery]);
 
-  const allIpLogs = useMemo(() => {
+  const allIpLogs = useMemo<IpLogItem[]>(() => {
     const logs = users.flatMap(u => (u.ipHistory || []).map(h => ({ 
       ...h, 
       userId: u.uid, 
@@ -43,7 +61,7 @@ export function AuditTrailPanel({
       .sort((a, b) => new Date(b.seenAt).getTime() - new Date(a.seenAt).getTime());
   }, [users, searchQuery]);
 
-  const allActivityLogs = useMemo(() => {
+  const allActivityLogs = useMemo<ActivityLogItem[]>(() => {
     const logs = users.flatMap(u => (u.activityHistory || []).map(a => ({ 
       ...a, 
       userId: u.uid, 
@@ -141,10 +159,12 @@ export function AuditTrailPanel({
                   </td>
                 </tr>
               ) : (
-                paginatedLogs.map((log: any, idx) => (
+                paginatedLogs.map((log, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-6 py-4 text-xs font-medium text-slate-500">
-                      {formatDate(tab === "ip" ? log.seenAt : log.timestamp, true)}
+                      {tab === "ip"
+                        ? formatDate((log as IpLogItem).seenAt, true)
+                        : formatDate((log as ActivityLogItem).timestamp, true)}
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-xs font-bold text-slate-900">{log.userName}</p>
@@ -152,13 +172,13 @@ export function AuditTrailPanel({
                     </td>
                     {tab === "ip" ? (
                       <>
-                        <td className="px-6 py-4 font-mono text-xs text-slate-600">{log.ipAddress}</td>
-                        <td className="px-6 py-4 text-xs text-slate-600">{log.location}</td>
+                        <td className="px-6 py-4 font-mono text-xs text-slate-600">{(log as IpLogItem).ipAddress}</td>
+                        <td className="px-6 py-4 text-xs text-slate-600">{(log as IpLogItem).location}</td>
                       </>
                     ) : (
                       <>
-                        <td className="px-6 py-4 text-xs font-black text-slate-800">{log.title}</td>
-                        <td className="px-6 py-4 text-xs text-slate-500 max-w-xs truncate">{log.description}</td>
+                        <td className="px-6 py-4 text-xs font-black text-slate-800">{(log as ActivityLogItem).title}</td>
+                        <td className="px-6 py-4 text-xs text-slate-500 max-w-xs truncate">{(log as ActivityLogItem).description}</td>
                       </>
                     )}
                     <td className="px-6 py-4">
