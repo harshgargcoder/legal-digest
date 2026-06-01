@@ -75,6 +75,60 @@ export async function GET(request: Request) {
     const categories = searchParams.get("categories")?.split(",");
     const topics = searchParams.get("topics")?.split(",");
 
+    // ── BALANCED HOME FEED (ALL CATEGORIES) ──────────────────────────────────
+    if ((!category || category === "All") && !search && (!topics || topics.length === 0) && (!categories || categories.includes("All"))) {
+      const { data: rawArticles, error } = await supabase
+        .from("legal_news")
+        .select("*")
+        .order("published_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(120);
+
+      if (error) throw error;
+
+      const articles = rawArticles || [];
+
+      const legalBucket: NewsArticleRow[] = [];
+      const nonLegalBucket: NewsArticleRow[] = [];
+
+      articles.forEach((art) => {
+        const catClean = (art.category || "").trim().toLowerCase();
+        if (catClean === "sports" || catClean === "global") {
+          nonLegalBucket.push(art as NewsArticleRow);
+        } else {
+          legalBucket.push(art as NewsArticleRow);
+        }
+      });
+
+      const balanced: NewsArticleRow[] = [];
+      let legalIdx = 0;
+      let nonLegalIdx = 0;
+
+      while (legalIdx < legalBucket.length || nonLegalIdx < nonLegalBucket.length) {
+        for (let i = 0; i < 3 && legalIdx < legalBucket.length; i++) {
+          balanced.push(legalBucket[legalIdx++]);
+        }
+        if (nonLegalIdx < nonLegalBucket.length) {
+          balanced.push(nonLegalBucket[nonLegalIdx++]);
+        }
+      }
+
+      const slicedArticles = balanced.slice(from, from + limit);
+      const hasMore = balanced.length > from + limit;
+
+      const payload: GetNewsResponse<NewsArticleRow> = {
+        success: true,
+        articles: slicedArticles,
+        total: slicedArticles.length,
+        page,
+        limit,
+        hasMore,
+        lastUpdated,
+      };
+
+      return NextResponse.json(payload);
+    }
+
     // Determine if we need special regional handling
     const isMixedCategory = category && MIXED_CATEGORIES.includes(category);
     const isNationalOnly = category && NATIONAL_ONLY_CATEGORIES.includes(category);
@@ -89,7 +143,7 @@ export async function GET(request: Request) {
 
       const categoryStr = category as string;
       const buildMixedQuery = (regionFilter: string) => {
-        let q = supabase.from("legal_news").select("*", { count: "exact" });
+        let q = supabase.from("legal_news").select("*");
         
         if (categoryStr === "Finance") {
           q = q.or('category.ilike."Corporate & Finance",category.ilike.Finance');
@@ -99,7 +153,7 @@ export async function GET(request: Request) {
         
         q = q.eq("region", regionFilter);
         q = q.order("published_at", { ascending: false }).order("id", { ascending: false });
-        return q.range(0, half - 1);
+        return q.range(0, half); // Fetch half + 1 items (range 0 to half) to check if more exist
       };
 
       const [nationalResult, intlResult] = await Promise.all([
@@ -125,19 +179,15 @@ export async function GET(request: Request) {
       }
 
       const sliced = interleaved.slice(0, limit);
-      const totalAvailable =
-        (nationalResult.count ?? 0) +
-        (intlResult.count ?? 0) +
-        (oldNationalResult.count ?? 0) +
-        (oldIntlResult.count ?? 0);
+      const hasMore = interleaved.length > limit;
 
       return NextResponse.json({
         success: true,
         articles: sliced,
-        total: totalAvailable,
+        total: sliced.length,
         page,
         limit,
-        hasMore: totalAvailable > limit,
+        hasMore,
         lastUpdated,
         regionInfo: { national: nationalArticles.length, international: intlArticles.length },
       });
@@ -146,7 +196,7 @@ export async function GET(request: Request) {
     // ── STANDARD QUERY ────────────────────────────────────────────────────────
     let query = supabase
       .from("legal_news")
-      .select("*", { count: "exact" });
+      .select("*");
 
     if (category && category !== "All") {
       if (category === "Finance") {
@@ -198,17 +248,23 @@ export async function GET(request: Request) {
       .order("published_at", { ascending: false })
       .order("id", { ascending: false });
 
-    const { data, error, count } = await query.range(from, to);
+    // Query limit + 1 items to see if there is another page
+    const queryTo = from + limit;
+    const { data, error } = await query.range(from, queryTo);
 
     if (error) throw error;
 
+    const fetchedArticles = data || [];
+    const hasMore = fetchedArticles.length > limit;
+    const slicedArticles = fetchedArticles.slice(0, limit);
+
     const payload: GetNewsResponse<NewsArticleRow> = {
       success: true,
-      articles: (data || []) as NewsArticleRow[],
-      total: count || 0,
+      articles: slicedArticles as NewsArticleRow[],
+      total: slicedArticles.length,
       page,
       limit,
-      hasMore: count ? to + 1 < count : false,
+      hasMore,
       lastUpdated,
     };
 

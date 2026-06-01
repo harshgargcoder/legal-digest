@@ -27,12 +27,14 @@ export async function POST(req: Request) {
     }
 
     const modelsToTry = [
-        "gemini-3-flash-preview",
+        "gemini-3.1-flash-lite",
+        "gemini-3.1-flash-lite-preview",
         "gemini-2.5-flash",
-        "gemini-2.5-pro",
+        "gemini-3.1-pro-preview",
     ];
 
-    const model = genAI.getGenerativeModel({ model: modelsToTry[0] });
+    let summary = "";
+    let lastError = "";
 
     const prompt = `
       You are a Legal Summarizer. 
@@ -45,8 +47,21 @@ export async function POST(req: Request) {
       STRICT SUMMARY (max 300 tokens):
     `;
 
-    const result = await model.generateContent(prompt);
-    const summary = result.response.text();
+    for (const modelName of modelsToTry) {
+      try {
+        const model = genAI.getGenerativeModel({ model: modelName });
+        const result = await model.generateContent(prompt);
+        summary = result.response.text();
+        if (summary) break;
+      } catch (err: unknown) {
+        lastError = err instanceof Error ? err.message : String(err);
+        console.warn(`Moot Court Summarize Model ${modelName} failed:`, lastError);
+      }
+    }
+
+    if (!summary) {
+      throw new Error(`All moot court summarization models failed. Last error: ${lastError}`);
+    }
 
     const response: MootCourtSummaryResponse = { summary };
     return NextResponse.json(response);

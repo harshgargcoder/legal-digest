@@ -59,17 +59,6 @@ export default function ProfilePage() {
       }
     };
 
-    const fetchPreferences = async (uid: string) => {
-      try {
-        const res = await fetch(`/api/user-preferences?userId=${uid}`);
-        const data = await res.json();
-        if (data.preferences) {
-          setPreferences(data.preferences);
-        }
-      } catch (err: unknown) {
-        console.error("Failed to fetch preferences", err);
-      }
-    };
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser: FirebaseUser | null) => {
       setUser(currentUser);
@@ -148,6 +137,9 @@ export default function ProfilePage() {
         })
       });
 
+      // Dispatch custom event to notify Navbar and other listeners
+      window.dispatchEvent(new Event("profileUpdate"));
+
       setMessage("Profile specialized successfully.");
       setIsEditing(false);
       setFile(null);
@@ -181,19 +173,51 @@ export default function ProfilePage() {
     setTimeout(() => setPrefMessage(""), 3000);
   };
 
-  const toggleCategory = (name: string) => {
+  const toggleCategory = async (name: string) => {
     const currentCats = preferences.categories || [];
     const newCats = currentCats.includes(name) 
       ? currentCats.filter((c: string) => c !== name) 
       : [...currentCats, name];
+    
     setPreferences({ ...preferences, categories: newCats });
+
+    if (!user) return;
+    try {
+      await fetch("/api/user-preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.uid,
+          categories: newCats,
+          topics: preferences.topics || []
+        })
+      });
+    } catch (err) {
+      console.error("Failed to auto-save categories:", err);
+    }
   };
 
-  const removeTopic = (topic: string) => {
+  const removeTopic = async (topic: string) => {
+    const newTopics = (preferences.topics || []).filter((t: string) => t !== topic);
     setPreferences({
       ...preferences,
-      topics: (preferences.topics || []).filter((t: string) => t !== topic)
+      topics: newTopics
     });
+
+    if (!user) return;
+    try {
+      await fetch("/api/user-preferences", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.uid,
+          categories: preferences.categories || [],
+          topics: newTopics
+        })
+      });
+    } catch (err) {
+      console.error("Failed to auto-save followed topics:", err);
+    }
   };
 
   if (loading) {
@@ -216,7 +240,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 pt-32 pb-24 px-4 sm:px-6">
-      <div className="max-w-4xl mx-auto space-y-8">
+      <div className="max-w-7xl mx-auto space-y-8">
 
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Researcher Profile</h1>
@@ -231,7 +255,12 @@ export default function ProfilePage() {
               <div className="relative group mb-4">
                 <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 text-3xl font-black shadow-xl border-4 border-white overflow-hidden relative">
                   {previewUrl ? (
-                    <img src={previewUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    <img 
+                      src={previewUrl} 
+                      alt="Avatar" 
+                      className="w-full h-full object-cover" 
+                      onError={() => setPreviewUrl(null)} 
+                    />
                   ) : (
                     <span>{displayName ? displayName[0].toUpperCase() : (user.email ? user.email[0].toUpperCase() : "?")}</span>
                   )}

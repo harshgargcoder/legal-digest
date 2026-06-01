@@ -102,6 +102,28 @@ export default function DashboardPage() {
     .map((b): NewsArticle | null => (isNewsArticle(b.legal_news) ? b.legal_news : null))
     .filter((item): item is NewsArticle => item !== null);
 
+  // Dynamically calculate the user's top bookmark category
+  const getTopCategory = () => {
+    if (savedCases.length === 0) return "N/A";
+    const counts: Record<string, number> = {};
+    savedCases.forEach((item) => {
+      const cat = item.category || "General";
+      counts[cat] = (counts[cat] || 0) + 1;
+    });
+    let topCat = "N/A";
+    let maxCount = 0;
+    Object.entries(counts).forEach(([cat, count]) => {
+      if (count > maxCount) {
+        maxCount = count;
+        topCat = cat;
+      }
+    });
+    return topCat;
+  };
+
+  // Count bookmarked cases that actually have AI summaries generated
+  const briefCount = savedCases.filter((item) => item.ai_summary && item.ai_summary.trim() !== "").length;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pt-32 pb-8 px-4 sm:px-8">
       <div className="max-w-7xl mx-auto space-y-8">
@@ -140,10 +162,10 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center gap-3 text-emerald-600 mb-2">
               <Activity size={20} />
-              <h3 className="font-bold text-sm uppercase tracking-wider">AI Summaries</h3>
+              <h3 className="font-bold text-sm uppercase tracking-wider">AI Briefs</h3>
             </div>
-            <p className="text-4xl font-black text-slate-900">{(savedCases.length * 1.5).toFixed(0)}</p>
-            <p className="text-xs text-slate-500 mt-2 font-medium">Estimated generation count</p>
+            <p className="text-4xl font-black text-slate-900">{briefCount}</p>
+            <p className="text-xs text-slate-500 mt-2 font-medium">Generated case briefs count</p>
           </div>
 
           <div className="bg-white border border-gray-100 rounded-2xl p-6 relative overflow-hidden group shadow-sm hover:shadow-md transition-shadow">
@@ -165,7 +187,7 @@ export default function DashboardPage() {
               <BookOpen size={20} />
               <h3 className="font-bold text-sm uppercase tracking-wider">Top Category</h3>
             </div>
-            <p className="text-2xl font-black text-slate-900 mt-1">Constitutional</p>
+            <p className="text-2xl font-black text-slate-900 mt-1">{getTopCategory()}</p>
           </div>
 
         </div>

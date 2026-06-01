@@ -68,11 +68,13 @@ function HomeContent() {
   return (
     <div className="max-w-[1440px] mx-auto px-4 pt-32 pb-8 min-h-screen bg-gray-50 dark:bg-slate-950">
 
-      {/* CATEGORY FILTER */}
-      <CategoryFilter
-        category={category}
-        setCategory={setCategory}
-      />
+      {/* STICKY CATEGORY FILTER CONTAINER */}
+      <div className="sticky top-[64px] z-[90] bg-gray-50/80 dark:bg-slate-950/80 backdrop-blur-md py-3.5 -mx-4 px-4 border-b border-slate-200/40 dark:border-slate-800/40 transition-all duration-300">
+        <CategoryFilter
+          category={category}
+          setCategory={setCategory}
+        />
+      </div>
 
       {/* THREE-COLUMN LAYOUT: LEADERBOARD | NEWS | SIDEBAR */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-10">

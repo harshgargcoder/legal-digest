@@ -133,46 +133,27 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
   return (
     <div
       className={`
-      group relative overflow-hidden transition-all duration-500 border cursor-pointer
-      hover:-translate-y-1 hover:scale-[1.005]
+      group relative overflow-hidden transition-colors border cursor-pointer bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-sm hover:border-slate-400 dark:hover:border-slate-600
       ${isFeatured
-          ? "p-8 sm:p-10 rounded-[2rem] bg-white border-gray-200 shadow-xl hover:border-indigo-400/60 hover:shadow-indigo-500/10"
-          : `rounded-xl p-3 sm:p-5 ${isTopThree ? "bg-white border-gray-200 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-400/60" : "bg-white border-gray-100 shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:border-indigo-300/50"}`
+          ? "p-6 sm:p-8 rounded-lg"
+          : "p-4 sm:p-5 rounded-md"
         }
     `}
     >
-      {/* Background Glow for Featured/Top Items */}
-      {isFeatured && (
-        <>
-          <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-indigo-500/5 to-transparent opacity-50 pointer-events-none mix-blend-screen"></div>
-          <div className="absolute -top-32 -right-32 w-64 h-64 bg-indigo-600/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-purple-600/20 transition-colors duration-1000"></div>
-        </>
-      )}
-      {/* Shimmer sweep on hover */}
-      <div className="pointer-events-none absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out bg-gradient-to-r from-transparent via-white/10 to-transparent z-20" />
-
-      {/* Animated left accent border */}
-      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-0 group-hover:h-3/4 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out z-10" />
-      {/* Background Glow for Top Items */}
-      {isTopThree && (
-        <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-700"></div>
-      )}
-
       {/* Header Section */}
       <div className="flex justify-between items-start gap-2 mb-2 relative z-10">
         <div className="flex flex-col items-start gap-1">
           {/* Top Story / Trending Badge */}
           {isFeatured ? (
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full font-bold text-[10px] tracking-widest uppercase bg-indigo-600 text-white border border-indigo-700 mb-4 backdrop-blur-md shadow-lg shadow-indigo-600/20 relative z-10">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-200 animate-pulse"></span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md font-bold text-[9px] tracking-wider uppercase bg-slate-900 text-white border border-slate-950 mb-2 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100">
               Top Story
             </span>
           ) : isTopThree && (
-            <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[8px] sm:text-[9px] font-bold tracking-wider uppercase shadow-md shadow-indigo-500/20 mb-1">
-              <span className="text-[9px] sm:text-[10px]">🔥</span> Trending {index + 1}
+            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-[8px] sm:text-[9px] font-bold tracking-wider uppercase border border-slate-200 dark:border-slate-700 mb-1.5 w-fit">
+              🔥 Trending {index + 1}
             </span>
           )}
-          <h2 className={`${isFeatured ? "text-2xl sm:text-4xl" : "text-base sm:text-xl"} font-bold leading-tight text-slate-900 group-hover:text-indigo-600 transition-colors duration-300`}>
+          <h2 className={`${isFeatured ? "text-xl sm:text-2xl" : "text-sm sm:text-base"} font-serif font-bold leading-snug text-slate-900 dark:text-white group-hover:text-slate-700 dark:group-hover:text-slate-350 transition-colors`}>
             {safeTitle}
           </h2>
         </div>
@@ -183,56 +164,56 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
       </div>
 
       {/* Meta Bar */}
-      <div className="flex items-center gap-3 text-[10px] sm:text-[11px] font-bold text-slate-500 mb-3 relative z-10">
-        <span className="flex items-center gap-1.5 px-1.5 py-1 bg-slate-50 rounded-md border border-gray-100">
-          <BookOpen size={10} className="text-indigo-400" />
+      <div className="flex items-center gap-3 text-[10px] sm:text-[11px] font-medium text-slate-500 mb-2.5 relative z-10">
+        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+          <BookOpen size={9} />
           {item.category}
         </span>
-        <span className="flex items-center gap-1.5">
-          <Clock size={10} />
+        <span className="flex items-center gap-1">
+          <Clock size={9} />
           {formattedTime}
         </span>
       </div>
 
       {/* Main Content */}
       <div className="relative z-10 space-y-3">
-        <p className={`leading-relaxed text-slate-600 ${isFeatured ? "text-base sm:text-lg max-w-3xl" : "text-[13px] sm:text-sm line-clamp-2 group-hover:line-clamp-none"} transition-all duration-500`}>
+        <p className={`leading-relaxed text-slate-600 dark:text-slate-305 ${isFeatured ? "text-sm sm:text-base max-w-3xl" : "text-[12px] sm:text-sm line-clamp-2 group-hover:line-clamp-none"} transition-all duration-300`}>
           {safeSummary || "No full summary provided for this event. Click below to analyze."}
         </p>
 
         {/* Actions Row */}
-        <div className="flex items-center justify-between mt-4">
+        <div className="flex items-center justify-between mt-3">
           <div className="flex items-center gap-3">
             {!aiSummary && !loading && (
               <button
                 onClick={(e) => { e.stopPropagation(); generateSummary(); }}
                 disabled={loading}
-                className="group/btn flex items-center gap-2 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-100 rounded-xl text-[10px] font-bold text-indigo-700 transition-all active:scale-95"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded text-[10px] font-bold text-slate-800 dark:text-slate-200 transition-colors"
               >
-                <Sparkles size={12} className="text-indigo-500 group-hover/btn:rotate-12 transition-transform" />
-                Generate AI Case Brief
+                <Sparkles size={11} className="text-slate-500" />
+                Generate Case Brief
               </button>
             )}
 
             {loading && (
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl animate-pulse">
-                <div className="w-3 h-3 rounded-full border-2 border-indigo-400 border-t-transparent animate-spin"></div>
-                <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider">Analyzing...</span>
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-50 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 rounded animate-pulse">
+                <div className="w-2.5 h-2.5 rounded-full border border-slate-400 border-t-transparent animate-spin"></div>
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Analyzing...</span>
               </div>
             )}
 
             {aiSummary && (
               <button
                 onClick={(e) => { e.stopPropagation(); setShowModal(true); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl text-[10px] font-bold text-emerald-700 uppercase tracking-widest hover:bg-emerald-100 transition-all"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-900 text-white dark:bg-white dark:text-slate-950 border border-slate-900 rounded text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-colors"
               >
-                <Sparkles size={12} className="text-emerald-500" /> Brief Ready
+                <Sparkles size={11} /> Brief Ready
               </button>
             )}
           </div>
 
           {summaryError && (
-            <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-[11px] font-semibold text-rose-700">
+            <div className="mt-3 rounded border border-rose-200 bg-rose-50 px-3 py-2 text-[10px] font-semibold text-rose-700">
               {summaryError}
             </div>
           )}
@@ -243,10 +224,10 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => { e.stopPropagation(); logReadingActivity(); }}
-              className="group/link flex items-center gap-1.5 text-[10px] sm:text-[11px] font-bold text-slate-400 hover:text-indigo-600 transition-all duration-300"
+              className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:underline transition-all"
             >
               Read Full Document
-              <ExternalLink size={12} className="transition-transform duration-300 group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5" />
+              <ExternalLink size={10} />
             </a>
           ) : (
             <span className="text-[10px] sm:text-[11px] font-bold text-slate-300">
@@ -257,57 +238,57 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
 
         {/* Modal Portal */}
         {mounted && showModal && createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-hidden">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 overflow-hidden">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowModal(false)}
-              className="absolute inset-0 bg-slate-900/80 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
             />
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.98, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-4xl bg-white rounded-[2rem] sm:rounded-[3rem] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-white/20"
+              exit={{ opacity: 0, scale: 0.98, y: 10 }}
+              className="relative w-full max-w-3xl bg-white dark:bg-slate-900 rounded-lg shadow-2xl flex flex-col max-h-[85vh] overflow-hidden border border-slate-200 dark:border-slate-800"
             >
               {/* Modal Header */}
-              <div className="flex items-center justify-between p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-600 flex items-center justify-center text-white shadow-lg shadow-indigo-200">
-                    <Scale size={24} />
+              <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded bg-slate-900 dark:bg-slate-105 flex items-center justify-center text-white dark:text-slate-900 shadow-sm">
+                    <Scale size={20} />
                   </div>
                   <div>
-                    <h3 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">AI Case Briefing</h3>
+                    <h3 className="text-lg font-serif font-bold text-slate-900 dark:text-white">AI Case Brief</h3>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
                     onClick={toggleAudio}
-                    className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all ${isSpeaking ? 'bg-rose-500 text-white' : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'}`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded font-bold text-xs uppercase transition-all ${isSpeaking ? 'bg-rose-600 text-white' : 'bg-slate-100 dark:bg-slate-850 hover:bg-slate-200 border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200'}`}
                   >
-                    {isSpeaking ? <><Square size={14} className="fill-current" /> Stop</> : <><Volume2 size={14} /> Listen</>}
+                    {isSpeaking ? <><Square size={12} className="fill-current" /> Stop</> : <><Volume2 size={12} /> Listen</>}
                   </button>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="p-3 hover:bg-slate-100 rounded-2xl text-slate-400 hover:text-slate-900 transition-all"
+                    className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all"
                   >
-                    <X size={24} />
+                    <X size={20} />
                   </button>
                 </div>
               </div>
 
               {/* Scrollable Content */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 sm:p-10 space-y-8 bg-white">
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6 bg-white dark:bg-slate-900">
                 {/* News Context */}
-                <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100 mb-8">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Source Document</p>
-                  <h4 className="text-lg font-bold text-slate-900 leading-snug">{safeTitle}</h4>
+                <div className="p-4 rounded border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Source Document</p>
+                  <h4 className="text-base font-serif font-bold text-slate-900 dark:text-white leading-snug">{safeTitle}</h4>
                 </div>
 
-                <div className="prose prose-slate prose-indigo max-w-none">
+                <div className="prose prose-slate dark:prose-invert max-w-none">
                   {aiSummary.split("\n")
                     .filter((line: string) => line.trim() !== "" && line.trim() !== "." && line.trim() !== "-")
                     .map((line: string, i: number) => {
@@ -316,29 +297,29 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
                         const label = parts[0];
                         const rest = parts.slice(1).join(":");
                         return (
-                          <div key={i} className="mb-6 group">
-                            <h5 className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                              <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                          <div key={i} className="mb-4">
+                            <h5 className="text-[10px] font-bold text-slate-900 dark:text-white uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                              <span className="w-1 h-1 rounded-full bg-slate-900 dark:bg-white" />
                               {label.replace(/\*\*/g, "")}
                             </h5>
-                            <p className="text-base text-slate-700 leading-relaxed font-medium pl-3 border-l-2 border-slate-100 group-hover:border-indigo-200 transition-colors">
+                            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium pl-2.5 border-l border-slate-200 dark:border-slate-800">
                               {rest.replace(/\*\*/g, "")}
                             </p>
                           </div>
                         );
                       }
-                      return <p key={i} className="text-base text-slate-700 leading-relaxed mb-4 font-medium">{line}</p>;
+                      return <p key={i} className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed mb-3 font-medium">{line}</p>;
                     })}
                 </div>
 
                 {/* Tags & Precedents */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12 pt-12 border-t border-slate-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t border-slate-200 dark:border-slate-800">
                   {tags.length > 0 && (
-                    <div className="space-y-4">
-                      <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Case Tags</h5>
-                      <div className="flex flex-wrap gap-2">
+                    <div className="space-y-2">
+                      <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Case Tags</h5>
+                      <div className="flex flex-wrap gap-1.5">
                         {tags.map((tag, i) => (
-                          <span key={i} className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-xl text-[11px] font-bold border border-indigo-100">
+                          <span key={i} className="px-2 py-1 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-350 rounded text-[10px] font-bold border border-slate-200 dark:border-slate-700">
                             #{tag}
                           </span>
                         ))}
@@ -347,13 +328,13 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
                   )}
 
                   {precedents.length > 0 && !precedents[0].toLowerCase().includes("none") && (
-                    <div className="space-y-4">
-                      <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Key Precedents</h5>
-                      <div className="space-y-2">
+                    <div className="space-y-2">
+                      <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Key Precedents</h5>
+                      <div className="space-y-1.5">
                         {precedents.map((p, i) => (
-                          <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
-                            <Scale size={14} className="text-indigo-400 shrink-0" />
-                            <span className="text-xs font-bold text-slate-700">{p}</span>
+                          <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+                            <Scale size={11} className="text-slate-400 shrink-0" />
+                            <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300">{p}</span>
                           </div>
                         ))}
                       </div>
@@ -363,24 +344,24 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
               </div>
 
               {/* Modal Footer */}
-              <div className="p-6 sm:p-8 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Verified Brief</span>
+              <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">AI Verified Brief</span>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
                       navigator.clipboard.writeText(aiSummary);
                       alert("Copied to clipboard!");
                     }}
-                    className="p-3 bg-white border border-slate-200 rounded-2xl text-slate-400 hover:text-indigo-600 transition-all shadow-sm hover:shadow-md"
+                    className="p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-slate-500 hover:text-slate-900 dark:hover:text-white shadow-sm"
                   >
-                    <Clipboard size={18} />
+                    <Clipboard size={14} />
                   </button>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="px-8 py-3 bg-slate-950 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all shadow-xl shadow-slate-200"
+                    className="px-5 py-2 bg-slate-950 text-white dark:bg-slate-100 dark:text-slate-950 rounded font-bold text-[10px] uppercase tracking-wider hover:opacity-90 shadow-sm"
                   >
                     Close Brief
                   </button>

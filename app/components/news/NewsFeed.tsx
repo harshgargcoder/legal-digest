@@ -63,18 +63,18 @@ export default function NewsFeed(props: NewsFeedProps) {
       </div>
 
       {hasMore && (
-        <div className="flex justify-center mt-12 pb-12">
+        <div className="flex justify-center mt-8 pb-8">
           <button
             onClick={loadMore}
             disabled={loading}
             className="
-            px-8 py-3.5 rounded-full font-semibold transition-all duration-300 text-sm tracking-wide
-            bg-white text-gray-900 border border-gray-200 hover:border-indigo-500 hover:bg-gray-50
-            disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 shadow-md
+            px-6 py-2.5 rounded-md font-semibold transition-colors text-xs uppercase tracking-wider
+            bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700
+            disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm
           "
           >
             {loading && (
-              <span className="w-4 h-4 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+              <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-500 border-t-transparent animate-spin" />
             )}
             {loading ? "Loading..." : "Load Older Archives"}
           </button>

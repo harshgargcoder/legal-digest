@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, type User } from "firebase/auth";
+import { Bookmark } from "lucide-react";
 
 function LoginRequiredModal({ onClose }: { onClose: () => void }) {
   const [mounted, setMounted] = useState(false);
@@ -56,7 +57,6 @@ function LoginRequiredModal({ onClose }: { onClose: () => void }) {
           flexDirection: "column",
           alignItems: "center",
           gap: "1rem",
-          // No transform here to avoid any shake
         }}
       >
         {/* Icon */}
@@ -241,13 +241,17 @@ export default function BookmarkButton({ postId }: { postId: string }) {
       )}
       <button
         onClick={toggleBookmark}
-        className="flex items-center gap-2 text-sm transition"
+        className="flex items-center justify-center p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        title={bookmarked ? "Remove Bookmark" : "Bookmark case"}
       >
-        {bookmarked ? (
-          <span className="text-red-500 cursor-pointer">❤️</span>
-        ) : (
-          <span className="text-gray-400 cursor-pointer">🤍</span>
-        )}
+        <Bookmark
+          size={16}
+          className={`transition-all duration-200 ${
+            bookmarked
+              ? "text-indigo-600 fill-indigo-600 dark:text-indigo-400 dark:fill-indigo-400 scale-110"
+              : "text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-350"
+          }`}
+        />
       </button>
     </>
   );
