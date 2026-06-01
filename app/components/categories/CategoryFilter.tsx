@@ -25,7 +25,7 @@ export default function CategoryFilter({
   setCategory,
 }: Props) {
   return (
-    <div className="flex gap-3 mb-8 overflow-x-auto thin-scrollbar pb-2">
+    <div className="flex gap-2 overflow-x-auto thin-scrollbar pb-1">
       {categories.map((cat) => {
         const Icon = cat.icon;
         return (
@@ -33,15 +33,15 @@ export default function CategoryFilter({
             key={cat.name}
             onClick={() => setCategory(cat.name)}
             className={`
-            flex items-center gap-2 px-4 py-2 rounded-xl text-xs whitespace-nowrap font-medium
-            transition-all duration-300 border
+            flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs whitespace-nowrap font-semibold
+            transition-colors border
             ${category === cat.name
-                ? "bg-indigo-600 border-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                : "bg-white border-gray-200 text-slate-600 hover:bg-gray-100 hover:border-gray-300 hover:shadow-md"
+                ? "bg-slate-900 border-slate-900 text-white dark:bg-slate-100 dark:border-slate-100 dark:text-slate-900"
+                : "bg-white border-slate-200 text-slate-600 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-350 hover:bg-slate-50 dark:hover:bg-slate-700"
               }
           `}
           >
-            <Icon size={14} className={category === cat.name ? "text-indigo-200" : "text-slate-500"} />
+            <Icon size={13} className={category === cat.name ? "text-white dark:text-slate-900" : "text-slate-400"} />
             {cat.name}
           </button>
         )

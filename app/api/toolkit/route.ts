@@ -276,8 +276,10 @@ export async function POST(req: Request) {
       process.env.GEMINI_API_KEY
     ) {
       const geminiModels = [
-        "gemini-3-flash",
         "gemini-3.1-flash-lite",
+        "gemini-3.1-flash-lite-preview",
+        "gemini-2.5-flash",
+        "gemini-3.1-pro-preview",
       ];
       for (const modelName of geminiModels) {
         try {
@@ -286,9 +288,22 @@ export async function POST(req: Request) {
           let maxTokens = 500;
           if (body.role === "counsel") maxTokens = 400;
           if (body.role === "evaluator") maxTokens = 1200;
+          // Increase token limits for briefing-pro to allow comprehensive briefs
+          if (tool === "briefing-pro") maxTokens = 2000;
+
+          // Support multi-modal file attachments (images, PDFs) for tools like Briefing Pro
+          const parts: Part[] = [{ text: optimizedPrompt }];
+          if (file && file.data && file.mimeType) {
+            parts.push({
+              inlineData: {
+                data: file.data,
+                mimeType: file.mimeType
+              }
+            });
+          }
 
           const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: optimizedPrompt }] }],
+            contents: [{ role: "user", parts }],
             generationConfig: { maxOutputTokens: maxTokens, temperature: 0.7 },
           });
           const response = await result.response;
