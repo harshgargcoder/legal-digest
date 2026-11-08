@@ -203,49 +203,80 @@ export default function Navbar() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-[1000] w-full border-b border-slate-200 bg-white px-4 py-0 text-slate-900 shadow-sm transition-all duration-300 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-100 ${
-          scrolled ? "h-16" : "h-20"
+        className={`fixed z-[1000] transition-all duration-500 ease-out text-slate-900 dark:text-slate-100 ${
+          scrolled
+            ? "top-2 sm:top-3 inset-x-2 sm:inset-x-6 max-w-[1400px] mx-auto h-16 rounded-2xl sm:rounded-3xl bg-white/85 dark:bg-slate-900/85 backdrop-blur-2xl border border-white/60 dark:border-slate-700/60 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.18),0_10px_25px_-5px_rgba(99,102,241,0.2)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.85),0_0_30px_rgba(99,102,241,0.25)] ring-1 ring-black/5 dark:ring-white/10 px-4 sm:px-6"
+            : "top-0 inset-x-0 w-full h-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-8 shadow-xs"
         }`}
       >
+        {/* Animated 3D Laser Accent Line on scroll */}
+        {scrolled && (
+          <div className="absolute -bottom-[1px] inset-x-12 h-[2px] bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-85 blur-[0.5px] animate-pulse pointer-events-none" />
+        )}
+
         <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between gap-4">
+          
+          {/* 3D POP-OUT LOGO */}
           <div className="flex flex-shrink-0 items-center">
-            <Image
-              src="/new_logo.png"
-              alt="Legal Digest"
-              width={scrolled ? 72 : 84}
-              height={scrolled ? 32 : 40}
-              className="h-auto cursor-pointer transition-all duration-300"
+            <div
               onClick={() => {
                 if (pathname === "/") window.scrollTo({ top: 0, behavior: "smooth" });
                 else router.push("/");
               }}
-            />
+              className="group/logo relative cursor-pointer flex items-center gap-2.5 py-1 px-1 rounded-2xl transition-all duration-300 transform-gpu hover:-translate-y-1 hover:scale-105 active:scale-95"
+            >
+              {/* 3D ambient radial glow behind logo */}
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-indigo-500/25 via-purple-500/25 to-blue-500/25 blur-md opacity-0 group-hover/logo:opacity-100 transition-opacity duration-300" />
+
+              <div className="relative transform-gpu transition-all duration-300 group-hover/logo:scale-110 group-hover/logo:rotate-[-2deg] drop-shadow-[0_10px_15px_rgba(99,102,241,0.35)]">
+                <Image
+                  src="/new_logo.png"
+                  alt="Legal Digest"
+                  width={scrolled ? 76 : 88}
+                  height={scrolled ? 34 : 42}
+                  className="h-auto transition-all duration-300"
+                />
+              </div>
+
+              {/* 3D live badge that pops out when scrolled */}
+              {scrolled && (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-50/90 dark:bg-indigo-950/70 border border-indigo-200/80 dark:border-indigo-800/80 text-[10px] font-bold text-indigo-600 dark:text-indigo-400 shadow-xs animate-in fade-in zoom-in-75 duration-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="tracking-wider uppercase">Live</span>
+                </div>
+              )}
+            </div>
           </div>
 
+          {/* DESKTOP NAV & CONTROLS */}
           <div className="hidden min-w-0 flex-1 items-center justify-end gap-4 xl:flex">
-            <div className="flex items-center gap-6">
+            {/* 3D Navigation Links */}
+            <div className="flex items-center gap-3">
               <NavLink href="/graph" active={pathname === "/graph"} icon={<Network size={14} />} label="Topology" />
               <NavLink href="/community" active={pathname === "/community"} icon={<Users size={14} />} label="Community" />
               <NavLink href="/toolkit" active={pathname.startsWith("/toolkit")} icon={<Boxes size={14} />} label="Toolkit" />
             </div>
 
-            <div className="relative min-w-[240px] max-w-[340px] flex-1" ref={desktopSearchRef}>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search archives..."
-                className="h-9 w-full rounded-md border border-slate-300 bg-white dark:bg-slate-800 dark:border-slate-700 pl-9 pr-8 text-xs text-slate-900 dark:text-slate-100 outline-none transition-all placeholder:text-slate-400 focus:border-slate-800 dark:focus:border-slate-400 focus:ring-1 focus:ring-slate-900/10"
-              />
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs opacity-60">🔎</span>
-              {search && (
-                <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 transition hover:bg-slate-100 dark:hover:bg-slate-700">
-                  <X size={12} className="text-slate-400" />
-                </button>
-              )}
+            {/* 3D Interactive Search Bar */}
+            <div className="relative min-w-[240px] max-w-[340px] flex-1 group/search" ref={desktopSearchRef}>
+              <div className="relative transform-gpu transition-all duration-300 group-hover/search:-translate-y-0.5 focus-within:-translate-y-1 focus-within:shadow-[0_12px_25px_-5px_rgba(99,102,241,0.25)] rounded-xl">
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search archives..."
+                  className="h-9 w-full rounded-xl border border-slate-200/90 bg-slate-50/90 dark:bg-slate-800/80 dark:border-slate-700/80 pl-9 pr-8 text-xs text-slate-900 dark:text-slate-100 outline-none transition-all placeholder:text-slate-400 shadow-inner focus:border-indigo-500 dark:focus:border-indigo-400 focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20"
+                />
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs opacity-70 group-hover/search:scale-110 transition-transform">🔎</span>
+                {search && (
+                  <button onClick={() => setSearch("")} className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-0.5 transition hover:bg-slate-200 dark:hover:bg-slate-750">
+                    <X size={12} className="text-slate-400" />
+                  </button>
+                )}
+              </div>
 
               {search.trim() !== "" && (
-                <div className="absolute left-0 top-[calc(100%+8px)] z-[1100] max-h-80 w-full overflow-y-auto rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-xl">
+                <div className="absolute left-0 top-[calc(100%+8px)] z-[1100] max-h-80 w-full overflow-y-auto rounded-xl border border-slate-200/90 bg-white/95 dark:border-slate-800 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-150">
                   {loading && <div className="p-3 text-xs text-slate-500">Searching...</div>}
                   {!loading &&
                     results.map((item) => (
@@ -256,7 +287,7 @@ export default function Navbar() {
                           setSearch("");
                           setResults([]);
                         }}
-                        className="cursor-pointer px-4 py-2.5 text-xs text-slate-800 dark:text-slate-200 transition hover:bg-slate-50 dark:hover:bg-slate-800"
+                        className="cursor-pointer px-4 py-2.5 text-xs text-slate-800 dark:text-slate-200 transition hover:bg-indigo-50/70 dark:hover:bg-indigo-950/40"
                       >
                         <p className="font-semibold">{item.title}</p>
                         <p className="text-[10px] text-slate-500">{item.source}</p>
@@ -266,28 +297,31 @@ export default function Navbar() {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
+            {/* 3D ACTION BUTTONS */}
+            <div className="flex items-center gap-2.5">
+              {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
-                className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 shadow-xs transition-all duration-300 transform-gpu hover:-translate-y-1 hover:scale-110 hover:shadow-[0_8px_16px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_20px_rgba(245,158,11,0.3)] active:translate-y-0.5 active:scale-95"
                 title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
               >
-                {theme === "dark" ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-slate-700" />}
+                {theme === "dark" ? <Sun size={15} className="text-amber-400 animate-spin-slow" /> : <Moon size={15} className="text-slate-700" />}
               </button>
 
+              {/* Notification Bell */}
               <div className="relative" ref={notificationRef}>
                 <button
                   onClick={() => {
                     setNotificationOpen(!notificationOpen);
                     if (!notificationOpen) markAllAsRead();
                   }}
-                  className="relative flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-slate-700"
+                  className="relative flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-800/90 text-slate-700 dark:text-slate-300 shadow-xs transition-all duration-300 transform-gpu hover:-translate-y-1 hover:scale-110 hover:shadow-[0_8px_16px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_20px_rgba(99,102,241,0.35)] active:translate-y-0.5 active:scale-95"
                 >
                   <Bell size={15} />
                   {unreadCount > 0 && (
                     <span className="absolute -right-1 -top-1 flex h-4 w-4">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
-                      <span className="relative inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+                      <span className="relative inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white shadow-xs">
                         {unreadCount}
                       </span>
                     </span>
@@ -295,7 +329,7 @@ export default function Navbar() {
                 </button>
 
                 {notificationOpen && (
-                  <div className="absolute right-0 top-[calc(100%+8px)] z-[1100] w-80 overflow-hidden rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl">
+                  <div className="absolute right-0 top-[calc(100%+8px)] z-[1100] w-80 overflow-hidden rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-150">
                     <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 px-4 py-2.5">
                       <p className="text-xs font-bold text-slate-900 dark:text-white">Notifications</p>
                       <button
@@ -351,13 +385,14 @@ export default function Navbar() {
                 )}
               </div>
 
+              {/* 3D User Dropdown / Login Button */}
               {user ? (
                 <div className="relative" ref={userDropdownRef}>
                   <button
                     onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                    className="flex items-center gap-2 rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 transition hover:bg-slate-50 dark:hover:bg-slate-850"
+                    className="flex items-center gap-2 rounded-xl border border-slate-200/80 dark:border-slate-700/80 bg-white/90 dark:bg-slate-900/90 p-1.5 pr-2.5 shadow-xs transition-all duration-300 transform-gpu hover:-translate-y-1 hover:scale-105 hover:shadow-[0_10px_20px_-4px_rgba(0,0,0,0.15)] dark:hover:shadow-[0_10px_20px_-4px_rgba(99,102,241,0.3)] active:translate-y-0.5 active:scale-95"
                   >
-                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded bg-slate-950 text-[10px] font-bold text-white uppercase dark:bg-slate-800 overflow-hidden relative">
+                    <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-slate-900 to-indigo-900 text-[10px] font-bold text-white uppercase overflow-hidden relative shadow-xs">
                       {photoURL ? (
                         <img 
                           src={photoURL} 
@@ -376,7 +411,7 @@ export default function Navbar() {
                   </button>
 
                   {userDropdownOpen && (
-                    <div className="absolute right-0 top-[calc(100%+8px)] z-[1100] w-52 overflow-hidden rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl">
+                    <div className="absolute right-0 top-[calc(100%+8px)] z-[1100] w-52 overflow-hidden rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-2xl animate-in fade-in zoom-in-95 duration-150">
                       <div className="border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 px-4 py-2.5">
                         <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{displayName || userEmail}</p>
                         <p className="text-[9px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">{isAdmin ? "Admin" : userRole}</p>
@@ -387,7 +422,7 @@ export default function Navbar() {
                         <NavMenuLink href="/bookmarks" label="Saved Cases" icon={<BookmarkIcon size={14} className="text-slate-600" />} onClick={() => setUserDropdownOpen(false)} />
                       </div>
                       <div className="border-t border-slate-100 dark:border-slate-800 p-1">
-                        <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20">
+                        <button onClick={handleLogout} className="flex w-full items-center gap-2 rounded-xl px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors">
                           <LogOut size={14} /> Logout
                         </button>
                       </div>
@@ -397,14 +432,17 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={() => setAuthOpen(true)}
-                  className="flex items-center gap-1.5 rounded-md bg-slate-950 dark:bg-slate-100 dark:text-slate-950 px-4 py-2 text-xs font-bold text-white hover:bg-slate-850 dark:hover:bg-white transition"
+                  className="group relative flex items-center gap-2 rounded-xl bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 dark:from-white dark:via-slate-100 dark:to-indigo-50 px-4 py-2 text-xs font-bold text-white dark:text-slate-950 shadow-[0_4px_12px_rgba(15,23,42,0.25)] dark:shadow-[0_4px_15px_rgba(255,255,255,0.2)] transition-all duration-300 transform-gpu hover:-translate-y-1 hover:scale-105 hover:shadow-[0_10px_25px_-3px_rgba(99,102,241,0.4)] active:scale-95"
                 >
-                  <User size={13} /> Researcher Login
+                  <User size={13} className="transition-transform duration-300 group-hover:scale-125 text-indigo-400 dark:text-indigo-600" />
+                  <span className="tracking-wide">Researcher Login</span>
+                  <span className="absolute inset-0 rounded-xl bg-white/10 dark:bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity" />
                 </button>
               )}
             </div>
           </div>
 
+          {/* MOBILE CONTROLS */}
           <div className="flex items-center gap-2 xl:hidden">
             <div className="relative w-36 sm:w-52" ref={mobileSearchRef}>
               <input
@@ -412,7 +450,7 @@ export default function Navbar() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search..."
-                className="w-full rounded-md border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900 py-1.5 pl-8 pr-2 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900 py-1.5 pl-8 pr-2 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 outline-none shadow-inner"
               />
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs opacity-60">🔎</span>
               {search && (
@@ -422,7 +460,10 @@ export default function Navbar() {
               )}
             </div>
 
-            <button onClick={() => setMenuOpen(!menuOpen)} className="flex h-9 w-9 flex-col items-center justify-center gap-1 rounded-md border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+            <button
+              onClick={() => setMenuOpen(!menuOpen)}
+              className="flex h-9 w-9 flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white/90 dark:border-slate-800 dark:bg-slate-900/90 shadow-xs transition-all duration-200 active:scale-90"
+            >
               <span className={`h-0.5 w-3.5 bg-slate-700 transition-all duration-300 dark:bg-slate-300 ${menuOpen ? "translate-y-1.5 rotate-45" : ""}`} />
               <span className={`h-0.5 w-3.5 bg-slate-700 transition-all duration-300 dark:bg-slate-300 ${menuOpen ? "opacity-0" : ""}`} />
               <span className={`h-0.5 w-3.5 bg-slate-700 transition-all duration-300 dark:bg-slate-300 ${menuOpen ? "-translate-y-1.5 -rotate-45" : ""}`} />
@@ -432,8 +473,8 @@ export default function Navbar() {
 
         {/* Mobile Dropdown Menu */}
         <div
-          className={`absolute left-0 right-0 top-full w-full border-b border-slate-200 bg-white shadow-lg transition-all duration-300 dark:border-slate-800 dark:bg-slate-900 ${
-            menuOpen ? "max-h-[500px] opacity-100 pointer-events-auto" : "max-h-0 opacity-0 pointer-events-none overflow-hidden"
+          className={`absolute left-0 right-0 top-full mt-2 w-full rounded-2xl border border-slate-200/90 bg-white/95 backdrop-blur-xl shadow-2xl transition-all duration-300 dark:border-slate-800 dark:bg-slate-900/95 overflow-hidden ${
+            menuOpen ? "max-h-[500px] opacity-100 pointer-events-auto" : "max-h-0 opacity-0 pointer-events-none"
           }`}
         >
           <div className="px-4 py-3 space-y-2">
@@ -506,14 +547,23 @@ function NavLink({ href, active, icon, label }: { href: string; active: boolean;
   return (
     <Link
       href={href}
-      className={`flex items-center gap-1.5 px-1 py-1.5 text-xs font-semibold transition border-b-2 ${
-        active 
-          ? "border-slate-950 text-slate-950 dark:border-white dark:text-white" 
-          : "border-transparent text-slate-555 hover:text-slate-950 dark:text-slate-450 dark:hover:text-white"
+      className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-300 transform-gpu ${
+        active
+          ? "bg-slate-950 text-white shadow-[0_8px_16px_-4px_rgba(15,23,42,0.4)] dark:bg-white dark:text-slate-950 dark:shadow-[0_8px_20px_-4px_rgba(255,255,255,0.3)] -translate-y-0.5 scale-102"
+          : "text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white hover:bg-slate-100/80 dark:hover:bg-slate-800/80 hover:-translate-y-1 hover:scale-105 hover:shadow-[0_10px_20px_-4px_rgba(99,102,241,0.25)] active:scale-95"
       }`}
     >
-      <span className={active ? "text-slate-950 dark:text-white" : "text-slate-400"}>{icon}</span>
-      {label}
+      <span
+        className={`transition-transform duration-300 group-hover:scale-125 group-hover:rotate-6 ${
+          active ? "text-indigo-400 dark:text-indigo-600" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="tracking-wide">{label}</span>
+      {active && (
+        <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_#6366f1]" />
+      )}
     </Link>
   );
 }

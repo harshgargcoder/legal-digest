@@ -6,29 +6,37 @@ type NewsArticleRow = {
   id: string;
   title: string;
   summary: string | null;
-  content: string | null;
+  content?: string | null;
   url: string;
   published_at: string;
+  created_at?: string;
   category: string | null;
   region: string | null;
   source: string | null;
+  image_url?: string | null;
+  score?: number | null;
+  tags?: string[] | string | null;
 };
 
-// Categories that should only show National (Indian) news
+// Standard column selection (omit heavy content column for feed list to prevent timeouts)
+const SELECT_COLUMNS =
+  "id, title, summary, url, source, published_at, created_at, category, region, score, image_url, tags";
+
+// Short in-memory response cache (TTL: 5 seconds) to prevent redundant concurrent queries while keeping news fresh
+type CacheEntry = {
+  data: GetNewsResponse<NewsArticleRow>;
+  expiresAt: number;
+};
+const memoryCache = new Map<string, CacheEntry>();
+
+// Categories that should prioritize National (Indian) news
 const NATIONAL_ONLY_CATEGORIES = [
   "Supreme Court",
   "High Court",
   "Constitutional",
-  "General",
   "Family",
   "Criminal",
 ];
-
-// Categories with 50/50 National vs International split
-const MIXED_CATEGORIES = ["Finance", "Sports"];
-
-// Categories that show only International news
-const INTERNATIONAL_ONLY_CATEGORIES = ["Global"];
 
 export async function GET(request: Request) {
   try {
@@ -36,6 +44,7 @@ export async function GET(request: Request) {
 
     const statsOnly = searchParams.get("stats") === "true";
     const category = searchParams.get("category");
+    const subCategory = searchParams.get("subCategory");
     const region = searchParams.get("region");
     const search = searchParams.get("search");
 
@@ -45,23 +54,33 @@ export async function GET(request: Request) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { data: settingsData } = await supabase
-      .from("settings")
-      .select("last_updated")
-      .eq("id", 1)
-      .single();
+    // Fast memory cache check
+    const cacheKey = `${category || "All"}_${subCategory || "All"}_${region || ""}_${search || ""}_${page}_${limit}`;
+    const cached = memoryCache.get(cacheKey);
+    if (cached && Date.now() < cached.expiresAt) {
+      return NextResponse.json(cached.data);
+    }
 
-    const lastUpdated = settingsData?.last_updated || null;
+    let lastUpdated: string | null = null;
+    try {
+      const { data: settingsData } = await supabase
+        .from("settings")
+        .select("last_updated")
+        .eq("id", 1)
+        .maybeSingle();
+      lastUpdated = settingsData?.last_updated || null;
+    } catch {
+      // Ignore settings error
+    }
 
     if (statsOnly) {
       const { data: sourcesData, count } = await supabase
         .from("legal_news")
-        .select("source", { count: "exact" });
+        .select("source", { count: "exact", head: false })
+        .limit(200);
 
       const uniqueSources = new Set(
-        (sourcesData || [])
-          .map((item) => item.source)
-          .filter(Boolean),
+        (sourcesData || []).map((item) => item.source).filter(Boolean),
       ).size;
 
       return NextResponse.json({
@@ -75,42 +94,69 @@ export async function GET(request: Request) {
     const categories = searchParams.get("categories")?.split(",");
     const topics = searchParams.get("topics")?.split(",");
 
-    // ── BALANCED HOME FEED (ALL CATEGORIES) ──────────────────────────────────
-    if ((!category || category === "All") && !search && (!topics || topics.length === 0) && (!categories || categories.includes("All"))) {
-      const { data: rawArticles, error } = await supabase
-        .from("legal_news")
-        .select("*")
-        .order("published_at", { ascending: false })
-        .order("id", { ascending: false })
-        .limit(120);
+    const isAllCategory =
+      (!category || category === "All") &&
+      !search &&
+      (!topics || topics.length === 0) &&
+      (!categories || categories.includes("All"));
 
-      if (error) throw error;
+    // ── 1. BALANCED HOME FEED (ALL CATEGORIES) ──────────────────────────────────
+    if (isAllCategory) {
+      let balanced: NewsArticleRow[] = [];
+      let queryError: unknown = null;
 
-      const articles = rawArticles || [];
+      try {
+        // Parallel fetch: High-priority legal court news (60) + General & Global world news (30)
+        const [legalRes, generalRes] = await Promise.all([
+          supabase
+            .from("legal_news")
+            .select(SELECT_COLUMNS)
+            .in("category", [
+              "Supreme Court",
+              "High Court",
+              "Constitutional",
+              "Criminal",
+              "Family",
+              "Finance",
+            ])
+            .order("published_at", { ascending: false, nullsFirst: false })
+            .limit(60),
+          supabase
+            .from("legal_news")
+            .select(SELECT_COLUMNS)
+            .or('category.eq."General & Global",category.eq.General,category.eq.Global')
+            .order("published_at", { ascending: false, nullsFirst: false })
+            .limit(30),
+        ]);
 
-      const legalBucket: NewsArticleRow[] = [];
-      const nonLegalBucket: NewsArticleRow[] = [];
+        const legalArticles = (legalRes.data as NewsArticleRow[]) || [];
+        const generalArticles = (generalRes.data as NewsArticleRow[]) || [];
 
-      articles.forEach((art) => {
-        const catClean = (art.category || "").trim().toLowerCase();
-        if (catClean === "sports" || catClean === "global") {
-          nonLegalBucket.push(art as NewsArticleRow);
-        } else {
-          legalBucket.push(art as NewsArticleRow);
+        // Interleave: 2 Legal court cases for every 1 General/Global news item
+        let legalIdx = 0;
+        let generalIdx = 0;
+
+        while (legalIdx < legalArticles.length || generalIdx < generalArticles.length) {
+          if (legalIdx < legalArticles.length) balanced.push(legalArticles[legalIdx++]);
+          if (legalIdx < legalArticles.length) balanced.push(legalArticles[legalIdx++]);
+          if (generalIdx < generalArticles.length) balanced.push(generalArticles[generalIdx++]);
         }
-      });
+      } catch (err) {
+        queryError = err;
+      }
 
-      const balanced: NewsArticleRow[] = [];
-      let legalIdx = 0;
-      let nonLegalIdx = 0;
+      // Fallback if parallel fetch failed or returned empty
+      if (balanced.length === 0) {
+        const fallbackRes = await supabase
+          .from("legal_news")
+          .select(SELECT_COLUMNS)
+          .order("created_at", { ascending: false, nullsFirst: false })
+          .limit(60);
 
-      while (legalIdx < legalBucket.length || nonLegalIdx < nonLegalBucket.length) {
-        for (let i = 0; i < 3 && legalIdx < legalBucket.length; i++) {
-          balanced.push(legalBucket[legalIdx++]);
+        if (fallbackRes.error) {
+          throw queryError || fallbackRes.error;
         }
-        if (nonLegalIdx < nonLegalBucket.length) {
-          balanced.push(nonLegalBucket[nonLegalIdx++]);
-        }
+        balanced = (fallbackRes.data as NewsArticleRow[]) || [];
       }
 
       const slicedArticles = balanced.slice(from, from + limit);
@@ -126,147 +172,165 @@ export async function GET(request: Request) {
         lastUpdated,
       };
 
+      if (page === 1) {
+        memoryCache.set(cacheKey, {
+          data: payload,
+          expiresAt: Date.now() + 15_000,
+        });
+      }
+
       return NextResponse.json(payload);
     }
 
-    // Determine if we need special regional handling
-    const isMixedCategory = category && MIXED_CATEGORIES.includes(category);
-    const isNationalOnly = category && NATIONAL_ONLY_CATEGORIES.includes(category);
-    const isInternationalOnly = category && INTERNATIONAL_ONLY_CATEGORIES.includes(category);
+    // ── 2. MERGED GENERAL & GLOBAL CATEGORY ───────────────────────────────────
+    const isGeneralGlobalCategory =
+      category === "General & Global" ||
+      category === "General/Global" ||
+      category === "General" ||
+      category === "Global";
 
-    // Override region filter if the user provided one explicitly
-    const explicitRegion = region;
+    if (isGeneralGlobalCategory && !search && (!topics || topics.length === 0)) {
+      let query = supabase.from("legal_news").select(SELECT_COLUMNS);
 
-    // ── MIXED CATEGORY (50/50 split) ──────────────────────────────────────────
-    if (isMixedCategory && !explicitRegion && !search && !topics) {
-      const half = Math.ceil(limit / 2);
-
-      const categoryStr = category as string;
-      const buildMixedQuery = (regionFilter: string) => {
-        let q = supabase.from("legal_news").select("*");
-        
-        if (categoryStr === "Finance") {
-          q = q.or('category.ilike."Corporate & Finance",category.ilike.Finance');
-        } else {
-          q = q.ilike("category", categoryStr.trim());
-        }
-        
-        q = q.eq("region", regionFilter);
-        q = q.order("published_at", { ascending: false }).order("id", { ascending: false });
-        return q.range(0, half); // Fetch half + 1 items (range 0 to half) to check if more exist
-      };
-
-      const [nationalResult, intlResult] = await Promise.all([
-        buildMixedQuery("National"),
-        buildMixedQuery("International"),
-      ]);
-
-      // Also fetch articles with old region values ('India'/'Global') for backwards compatibility
-      const [oldNationalResult, oldIntlResult] = await Promise.all([
-        buildMixedQuery("India"),
-        buildMixedQuery("Global"),
-      ]);
-
-      const nationalArticles = [...(nationalResult.data || []), ...(oldNationalResult.data || [])];
-      const intlArticles = [...(intlResult.data || []), ...(oldIntlResult.data || [])];
-
-      // Interleave results: N, I, N, I, ...
-      const interleaved: NewsArticleRow[] = [];
-      const maxLen = Math.max(nationalArticles.length, intlArticles.length);
-      for (let i = 0; i < maxLen; i++) {
-        if (nationalArticles[i]) interleaved.push(nationalArticles[i]);
-        if (intlArticles[i]) interleaved.push(intlArticles[i]);
+      if (subCategory === "General") {
+        query = query
+          .or('category.eq."General & Global",category.eq.General')
+          .or("region.eq.India,region.eq.National");
+      } else if (subCategory === "Global") {
+        query = query
+          .or('category.eq."General & Global",category.eq.Global')
+          .or("region.eq.Global,region.eq.International");
+      } else {
+        query = query.or(
+          'category.eq."General & Global",category.eq.General,category.eq.Global',
+        );
       }
 
-      const sliced = interleaved.slice(0, limit);
-      const hasMore = interleaved.length > limit;
+      query = query.order("published_at", { ascending: false, nullsFirst: false });
+      const queryTo = from + limit;
+      let { data, error } = await query.range(from, queryTo);
 
-      return NextResponse.json({
+      if (error) {
+        // Fallback: order by created_at
+        const fallback = await supabase
+          .from("legal_news")
+          .select(SELECT_COLUMNS)
+          .or('category.eq."General & Global",category.eq.General,category.eq.Global')
+          .order("created_at", { ascending: false, nullsFirst: false })
+          .range(from, queryTo);
+
+        if (!fallback.error) {
+          data = fallback.data;
+          error = null;
+        }
+      }
+
+      if (error) throw error;
+
+      const fetchedArticles = (data as NewsArticleRow[]) || [];
+      const hasMore = fetchedArticles.length > limit;
+      const slicedArticles = fetchedArticles.slice(0, limit);
+
+      const payload: GetNewsResponse<NewsArticleRow> = {
         success: true,
-        articles: sliced,
-        total: sliced.length,
+        articles: slicedArticles,
+        total: slicedArticles.length,
         page,
         limit,
         hasMore,
         lastUpdated,
-        regionInfo: { national: nationalArticles.length, international: intlArticles.length },
-      });
+      };
+
+      if (page === 1) {
+        memoryCache.set(cacheKey, {
+          data: payload,
+          expiresAt: Date.now() + 15_000,
+        });
+      }
+
+      return NextResponse.json(payload);
     }
 
-    // ── STANDARD QUERY ────────────────────────────────────────────────────────
-    let query = supabase
-      .from("legal_news")
-      .select("*");
+    // ── 3. STANDARD / SPECIFIC CATEGORY QUERIES ──────────────────────────────
+    let query = supabase.from("legal_news").select(SELECT_COLUMNS);
 
     if (category && category !== "All") {
       if (category === "Finance") {
-        query = query.or('category.ilike."Corporate & Finance",category.ilike.Finance');
+        query = query.or('category.eq.Finance,category.eq."Corporate & Finance"');
       } else {
-        query = query.ilike("category", category.trim());
+        query = query.eq("category", category.trim());
       }
     } else if (categories && categories.length > 0 && !categories.includes("All")) {
-      // Handle multiple categories with potential "Finance" selection
-      if (categories.includes("Finance") || categories.includes("Corporate & Finance")) {
-        const modifiedCategories = [...categories];
-        if (!modifiedCategories.includes("Finance")) modifiedCategories.push("Finance");
-        if (!modifiedCategories.includes("Corporate & Finance")) modifiedCategories.push("Corporate & Finance");
-        query = query.in("category", modifiedCategories);
-      } else {
-        query = query.in("category", categories);
-      }
+      query = query.in("category", categories);
     }
 
-    // Apply region constraint — support both old ('India'/'Global') and new ('National'/'International') values
-    if (explicitRegion) {
-      // Explicit override takes priority
-      query = query.eq("region", explicitRegion);
-    } else if (isNationalOnly) {
-      // Match both 'National' (new RSS) and 'India' (old fetch-news articles)
-      query = query.or("region.eq.National,region.eq.India");
-    } else if (isInternationalOnly) {
-      // Match both 'International' (new RSS) and 'Global' (old fetch-news articles)
-      query = query.or("region.eq.International,region.eq.Global");
+    // Apply region constraint safely ONLY if explicitly passed by client
+    if (region) {
+      query = query.eq("region", region);
     }
 
-    // Build topics filter
-    if (topics && topics.length > 0) {
-      const topicFilters = topics.map(topic => `title.ilike.%${topic.trim()}%`).join(",");
-      const summaryFilters = topics.map(topic => `summary.ilike.%${topic.trim()}%`).join(",");
-      const contentFilters = topics.map(topic => `content.ilike.%${topic.trim()}%`).join(",");
-      const orFilter = `${topicFilters},${summaryFilters},${contentFilters}`;
-      query = query.or(orFilter);
-    }
-
+    // Search filter if provided
     if (search && search.trim() !== "") {
       const formatted = `%${search.trim()}%`;
-      query = query.or(
-        `title.ilike.${formatted},summary.ilike.${formatted},content.ilike.${formatted}`,
-      );
+      query = query.or(`title.ilike.${formatted},summary.ilike.${formatted}`);
+    } else if ((!category || category === "All") && topics && topics.length > 0) {
+      // Apply topics filter ONLY on All category when explicitly requested
+      const topicFilters = topics
+        .map((t) => `title.ilike.%${t.trim()}%`)
+        .join(",");
+      query = query.or(topicFilters);
     }
 
-    query = query
-      .order("published_at", { ascending: false })
-      .order("id", { ascending: false });
+    // Order strictly by published_at DESC (nulls last)
+    query = query.order("published_at", { ascending: false, nullsFirst: false });
 
-    // Query limit + 1 items to see if there is another page
     const queryTo = from + limit;
-    const { data, error } = await query.range(from, queryTo);
+    let { data, error } = await query.range(from, queryTo);
+
+    // If query timed out with statement timeout, fallback to created_at DESC (chronological)
+    if (error && (error.code === "57014" || error.message?.includes("timeout"))) {
+      let fallbackQuery = supabase
+        .from("legal_news")
+        .select(SELECT_COLUMNS);
+
+      if (category && category !== "All") {
+        if (category === "Finance") {
+          fallbackQuery = fallbackQuery.or('category.eq.Finance,category.eq."Corporate & Finance"');
+        } else {
+          fallbackQuery = fallbackQuery.eq("category", category.trim());
+        }
+      }
+      fallbackQuery = fallbackQuery.order("created_at", { ascending: false, nullsFirst: false });
+
+      const fallbackRes = await fallbackQuery.range(from, queryTo);
+      if (!fallbackRes.error) {
+        data = fallbackRes.data;
+        error = null;
+      }
+    }
 
     if (error) throw error;
 
-    const fetchedArticles = data || [];
+    const fetchedArticles = (data as NewsArticleRow[]) || [];
     const hasMore = fetchedArticles.length > limit;
     const slicedArticles = fetchedArticles.slice(0, limit);
 
     const payload: GetNewsResponse<NewsArticleRow> = {
       success: true,
-      articles: slicedArticles as NewsArticleRow[],
+      articles: slicedArticles,
       total: slicedArticles.length,
       page,
       limit,
       hasMore,
       lastUpdated,
     };
+
+    if (page === 1) {
+      memoryCache.set(cacheKey, {
+        data: payload,
+        expiresAt: Date.now() + 15_000,
+      });
+    }
 
     return NextResponse.json(payload);
   } catch (error: unknown) {

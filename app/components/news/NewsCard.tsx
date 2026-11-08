@@ -164,11 +164,29 @@ export default function NewsCard({ item, index, isFeatured }: Props) {
       </div>
 
       {/* Meta Bar */}
-      <div className="flex items-center gap-3 text-[10px] sm:text-[11px] font-medium text-slate-500 mb-2.5 relative z-10">
-        <span className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
-          <BookOpen size={9} />
-          {item.category}
-        </span>
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-[10px] sm:text-[11px] font-medium text-slate-500 mb-2.5 relative z-10">
+        {/* Category & Section Identifier Badge */}
+        {item.category === "Global" || item.region === "Global" || item.region === "International" ? (
+          <span className="flex items-center gap-1 px-2 py-0.5 bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 rounded-md border border-purple-200 dark:border-purple-800 font-semibold text-[10px]">
+            🌐 Global (International)
+          </span>
+        ) : item.category === "General" || item.region === "India" || item.region === "National" ? (
+          <span className="flex items-center gap-1 px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 rounded-md border border-indigo-200 dark:border-indigo-800 font-semibold text-[10px]">
+            🇮🇳 General (National)
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700">
+            <BookOpen size={9} />
+            {item.category || "General"}
+          </span>
+        )}
+
+        {item.source && (
+          <span className="text-[10px] text-slate-400 font-mono">
+            {item.source}
+          </span>
+        )}
+
         <span className="flex items-center gap-1">
           <Clock size={9} />
           {formattedTime}

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 import Navbar from "@/app/components/Navbar";
 import Footer from "@/app/components/Footer";
-import SupportBot from "@/app/components/SupportBot";
+import FloatingDualAI from "@/app/components/ai/FloatingDualAI";
 
 import { useEffect } from "react";
 import { logActivity } from "@/lib/logger";
@@ -62,7 +62,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       <Navbar />
       <main className="min-h-screen">{children}</main>
       <Footer />
-      <SupportBot />
+      <FloatingDualAI />
     </>
   );
 }

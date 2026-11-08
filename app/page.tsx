@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useEffect, useState } from "react";
 import { useSearch } from "@/app/context/SearchContext";
 import { auth } from "@/lib/firebase";
@@ -12,16 +11,19 @@ import NewsletterCTA from "./components/NewsLetterCTA";
 import TrendingSidebar from "./components/TrendingSidebar";
 import PersonalizationModal from "./components/auth/PersonalizationModal";
 import MootCourtLeaderboard from "./components/MootCourtLeaderboard";
+import LegalHomepage from "./components/home/LegalHomepage";
 import type { NewsPreferences } from "./components/news/types";
 
 import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { Sparkles, Newspaper, BookOpen } from "lucide-react";
 
 function HomeContent() {
   const { search, setSearch } = useSearch();
   const searchParams = useSearchParams();
 
   const [category, setCategory] = useState(() => searchParams.get("category") || "All");
+  const [subCategory, setSubCategory] = useState<"All" | "General" | "Global">("All");
   const [user, setUser] = useState<User | null>(null);
   const [preferences, setPreferences] = useState<NewsPreferences | null>(null);
   const [isPersonalizing, setIsPersonalizing] = useState(false);
@@ -36,7 +38,7 @@ function HomeContent() {
     if (searchParam && searchParam !== search) {
       setSearch(searchParam);
     }
-  }, [searchParams, setSearch]);
+  }, [searchParams, setSearch, category, search]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser: User | null) => {
@@ -66,38 +68,56 @@ function HomeContent() {
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 pt-32 pb-8 min-h-screen bg-gray-50 dark:bg-slate-950">
+    <div className="max-w-[1440px] mx-auto px-4 pt-24 sm:pt-28 pb-12 min-h-screen bg-gray-50 dark:bg-slate-950 transition-colors">
 
-      {/* STICKY CATEGORY FILTER CONTAINER */}
-      <div className="sticky top-[64px] z-[90] bg-gray-50/80 dark:bg-slate-950/80 backdrop-blur-md py-3.5 -mx-4 px-4 border-b border-slate-200/40 dark:border-slate-800/40 transition-all duration-300">
-        <CategoryFilter
-          category={category}
-          setCategory={setCategory}
-        />
-      </div>
+      {/* ── RICH HOMEPAGE: LAW DEFINITION, HISTORY, BEST JUDGES, LAWYERS & SITE INTRO ── */}
+      <LegalHomepage
+        onExploreFeed={() => {
+          const el = document.getElementById("live-feed-section");
+          el?.scrollIntoView({ behavior: "smooth" });
+        }}
+      />
 
-      {/* THREE-COLUMN LAYOUT: LEADERBOARD | NEWS | SIDEBAR */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-10">
+      {/* ── LIVE LEGAL FEED & ARCHIVES SECTION ── */}
+      <div id="live-feed-section" className="scroll-mt-24 pt-6">
 
-        {/* LEFT: LEADERBOARD */}
-        <aside className="lg:col-span-3 lg:sticky lg:top-32 self-start order-2 lg:order-1">
-          <MootCourtLeaderboard />
-        </aside>
+        {/* THREE-COLUMN LAYOUT: LEADERBOARD | NEWS | SIDEBAR */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-        {/* CENTER: NEWS FEED */}
-        <div className="lg:col-span-6 order-1 lg:order-2">
-          <NewsFeed category={category} search={search} preferences={preferences} />
+          {/* LEFT: LEADERBOARD */}
+          <aside className="lg:col-span-3 lg:sticky lg:top-28 self-start order-2 lg:order-1">
+            <MootCourtLeaderboard />
+          </aside>
+
+          {/* CENTER: NEWS FEED & CATEGORY DROPDOWN */}
+          <div className="lg:col-span-6 order-1 lg:order-2 space-y-6">
+            {/* Category Dropdown Filter directly above feed */}
+            <CategoryFilter
+              category={category}
+              setCategory={setCategory}
+              subCategory={subCategory}
+              setSubCategory={setSubCategory}
+            />
+
+            <NewsFeed
+              category={category}
+              subCategory={subCategory}
+              search={search}
+              preferences={preferences}
+            />
+          </div>
+
+          {/* RIGHT: SIDEBAR */}
+          <aside className="lg:col-span-3 order-3">
+            <TrendingSidebar setSearch={setSearch} />
+          </aside>
+
         </div>
-
-        {/* RIGHT: SIDEBAR */}
-        <aside className="lg:col-span-3 order-3">
-          <TrendingSidebar setSearch={setSearch} />
-        </aside>
 
       </div>
 
       {/* NEWSLETTER */}
-      <div className="mt-16">
+      <div className="mt-20">
         <NewsletterCTA />
       </div>
 
@@ -117,11 +137,13 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-slate-950">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-slate-950">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+        </div>
+      }
+    >
       <HomeContent />
     </Suspense>
   );
