@@ -6,6 +6,7 @@ export type Category =
   | "Sports"
   | "General"
   | "Global"
+  | "General & Global"
   | "Criminal"
   | "Family";
 

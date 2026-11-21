@@ -38,29 +38,44 @@ export async function GET() {
             });
         }
 
-        // Fetch latest 100 articles ordered chronologically to represent the most recent topics
-        const { data, error } = await supabase
+        // Fetch latest legal articles with fast index query (nullsFirst: false)
+        let { data, error } = await supabase
             .from("legal_news")
             .select("title, description, category")
-            .order("published_at", { ascending: false })
-            .limit(100);
+            .order("published_at", { ascending: false, nullsFirst: false })
+            .limit(30);
 
         if (error) {
-            console.error("DB error:", error);
-            return NextResponse.json(
-                { articlesAnalyzed: 0, trendingTopics: [] },
-                { status: 500 },
-            );
+            console.warn("DB published_at order error in /api/summarize, falling back to created_at index:", error.message || error);
+            const fallback = await supabase
+                .from("legal_news")
+                .select("title, description, category")
+                .order("created_at", { ascending: false, nullsFirst: false })
+                .limit(30);
+
+            if (!fallback.error && fallback.data) {
+                data = fallback.data;
+                error = null;
+            }
         }
 
-        const articles = data || [];
+        const fallbackTrending = [
+            "Supreme Court Bench",
+            "Bail Jurisprudence",
+            "BNS Criminal Reforms",
+            "Article 21 Fundamental Rights",
+            "SEBI Corporate Regulations",
+            "High Court Writs"
+        ];
 
-        if (!articles.length) {
+        if (error || !data || data.length === 0) {
             return NextResponse.json({
                 articlesAnalyzed: 0,
-                trendingTopics: [],
+                trendingTopics: fallbackTrending,
             });
         }
+
+        const articles = data;
 
         let trendingTopics: string[] = [];
 

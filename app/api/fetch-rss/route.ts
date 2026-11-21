@@ -142,10 +142,15 @@ export async function GET(req: Request) {
 
           if (!title || !link) continue;
 
+          const isGeneralOrGlobal = feed.category === "General" || feed.category === "Global";
+          const finalCategory = isGeneralOrGlobal ? "General & Global" : feed.category;
+          const tags = isGeneralOrGlobal ? [feed.category] : null;
+
           const payload = {
             title,
             url: link,
-            category: feed.category,
+            category: finalCategory,
+            tags: tags,
             summary: description,
             region: feed.region,
             published_at: item.pubDate

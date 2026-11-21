@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Search, Check, ChevronRight, Globe, Shield, Landmark, Scale, BookOpen, Building2, Activity, Trophy, Search as SearchIcon, Gavel, Users } from "lucide-react";
+import { X, Search, Check, ChevronRight, Globe, Shield, Landmark, Scale, BookOpen, Building2, Activity, Trophy, Search as SearchIcon, Gavel, Users, Layers } from "lucide-react";
 import type { NewsPreferences } from "../news/types";
 
 interface Props {
@@ -23,9 +23,8 @@ const categories = [
   { name: "Finance", icon: Building2 },
   { name: "Criminal", icon: Gavel },
   { name: "Family", icon: Users },
-  { name: "General", icon: Activity },
-  { name: "Sports", icon: Trophy },
-  { name: "Global", icon: Shield }
+  { name: "General & Global", icon: Layers },
+  { name: "Sports", icon: Trophy }
 ];
 
 const suggestedTopics = [

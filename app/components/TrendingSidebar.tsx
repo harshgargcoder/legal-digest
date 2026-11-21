@@ -68,7 +68,10 @@ export default function TrendingSidebar({ setSearch }: Props) {
     "Supreme Court",
     "High Court",
     "Constitutional",
+    "Criminal",
+    "Family",
     "Finance",
+    "General & Global",
     "Sports"
   ];
 
@@ -155,8 +158,8 @@ export default function TrendingSidebar({ setSearch }: Props) {
         <button
           onClick={toggleNotifications}
           className={`w-full py-2 rounded text-xs font-bold border transition-colors shadow-sm active:scale-95 ${notificationsEnabled
-              ? 'bg-red-50 text-red-650 border-red-100 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900'
-              : 'bg-slate-900 text-white border-slate-950 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:border-slate-100'
+            ? 'bg-red-50 text-red-650 border-red-100 hover:bg-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900'
+            : 'bg-slate-900 text-white border-slate-950 hover:bg-slate-800 dark:bg-slate-100 dark:text-slate-950 dark:border-slate-100'
             }`}
         >
           {notificationsEnabled ? "Disable Alerts" : "Enable Alerts"}

@@ -76,7 +76,7 @@ export default function NewsFeed(props: NewsFeedProps) {
             {loading && (
               <span className="w-3.5 h-3.5 rounded-full border-2 border-slate-500 border-t-transparent animate-spin" />
             )}
-            {loading ? "Loading..." : "Load Older Archives"}
+            {loading ? "Loading..." : "Load More"}
           </button>
         </div>
       )}
